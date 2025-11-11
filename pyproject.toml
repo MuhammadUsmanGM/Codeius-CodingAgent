@@ -14,10 +14,11 @@ dependencies = [
     "python-dotenv>=1.2.1",
     "requests>=2.32.5",
     "rich>=14.2.0",
+    "pyfiglet>=1.0.0",
 ]
 
 [project.scripts]
-coding-agent = "coding_agent:main"
+coding-agent = "coding_agent.cli:main"
 
 [build-system]
 requires = ["hatchling"]
