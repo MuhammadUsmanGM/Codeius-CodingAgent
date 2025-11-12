@@ -26,6 +26,10 @@ Codeius is an AI-powered coding assistant that helps with various programming ta
 - **Data Visualization Tool**: Plot code metrics, test coverage, and database query results using matplotlib
 - **Self-Documenting Agent**: Auto-update Markdown docs (AUTHORS, CHANGELOG, README) as code changes
 - **Package Inspector**: Probe installed Python packages, license info, vulnerabilities, and dependencies offline
+- **Snippet/Template Manager**: Store, retrieve, and insert boilerplate snippets for accelerating repetitive coding
+- **Offline Web Scraping Tool**: Scrape static HTML files or local sites with BeautifulSoup, for documentation or data extraction tasks
+- **Advanced Configuration/Settings Tool**: Interactive config/credentials manager for .env, YAML, or TOML settings—all changes local and secure
+- **Scheduling/Task Automation Tool**: Local cron/task scheduler using schedule, letting the agent run commands, tests, or code checks automatically
 
 ## Installation
 
@@ -39,10 +43,10 @@ Codeius is an AI-powered coding assistant that helps with various programming ta
    ```bash
    pip install -e .
    # Additional dependencies for enhanced functionality:
-   pip install flask pytest pillow pytesseract radon flake8 matplotlib packaging
+   pip install flask pytest pillow pytesseract radon flake8 matplotlib packaging beautifulsoup4 pyyaml toml schedule
    ```
 
-3. To use the enhanced functionality including package inspection:
+3. To use the enhanced functionality including task scheduling:
    You will need to run the following server scripts in separate terminals (only those you plan to use):
    - `python code_search_server.py` (port 9300)
    - `python shell_server.py` (port 9400)
@@ -56,6 +60,10 @@ Codeius is an AI-powered coding assistant that helps with various programming ta
    - `python viz_server.py` (port 10200)
    - `python self_doc_server.py` (port 10300)
    - `python package_inspector_server.py` (port 10400)
+   - `python snippet_manager_server.py` (port 10500)
+   - `python web_scraper_server.py` (port 10600)
+   - `python config_manager_server.py` (port 10700)
+   - `python task_scheduler_server.py` (port 10800)
 
 4. To add custom plugins:
    - Create Python files in the `plugins/` directory
@@ -76,6 +84,18 @@ Codeius is an AI-powered coding assistant that helps with various programming ta
 
 8. To use package inspection tools:
    - Use `/inspect [package_name]` to get detailed information about a package including dependencies, licenses, and vulnerabilities
+
+9. To use snippet tools:
+   - Use `/snippet [action] [args]` to manage code snippets with actions like 'get', 'add', 'list', and 'insert'
+
+10. To use web scraping tools:
+   - Use `/scrape [file_or_dir_or_url] [css_selector]` to scrape content from HTML files, directories, or URLs
+
+11. To use configuration management tools:
+   - Use `/config [action] [args]` to manage config files with actions like 'view', 'edit', and 'list'
+
+12. To use scheduling automation tools:
+   - Use `/schedule [task_type] [interval] [target]` to schedule tasks to run automatically (e.g., tests, scripts, commands)
 
 ## Configuration
 

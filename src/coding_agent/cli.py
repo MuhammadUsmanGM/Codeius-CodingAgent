@@ -163,6 +163,125 @@ def visualization_task(agent, metric_type):
     console.print("[bold]This would send the request to the visualization server...[/bold]")
     console.print("[dim]In a real implementation, the server would generate a plot and display it.[/dim]")
 
+def snippet_task(agent, action, *args):
+    """Handle snippet management tasks"""
+    # Find the snippet manager provider
+    snippet_provider = None
+    for provider in agent.providers:
+        if hasattr(provider, 'server_name') and provider.server_name == 'snippet_manager':
+            snippet_provider = provider
+            break
+    
+    if not snippet_provider:
+        console.print("[bold red]Error: Snippet manager server not available.[/bold red]")
+        return
+    
+    if action == 'get' or action == 'show':
+        if len(args) < 1:
+            console.print("[bold red]Please specify a snippet key. Usage: /snippet get [key][/bold red]")
+            return
+        key = args[0]
+        console.print(f"[bold yellow]Retrieving snippet: {key}[/bold yellow]")
+        console.print("[bold]This would send the request to the snippet manager server...[/bold]")
+        console.print("[dim]In a real implementation, the server would return the snippet content.[/dim]")
+    
+    elif action == 'save' or action == 'add':
+        if len(args) < 2:
+            console.print("[bold red]Please specify a key and content. Usage: /snippet add [key] [description] [/bold red]")
+            return
+        key = args[0]
+        console.print(f"[bold yellow]Saving snippet: {key}[/bold yellow]")
+        console.print("[bold]This would send the request to the snippet manager server...[/bold]")
+        console.print("[dim]In a real implementation, the server would save the snippet.[/dim]")
+    
+    elif action == 'list':
+        console.print("[bold yellow]Listing all snippets...[/bold yellow]")
+        console.print("[bold]This would send the request to the snippet manager server...[/bold]")
+        console.print("[dim]In a real implementation, the server would return the list of snippets.[/dim]")
+    
+    elif action == 'insert':
+        if len(args) < 2:
+            console.print("[bold red]Please specify a snippet key and target. Usage: /snippet insert [key] [target_file][/bold red]")
+            return
+        key, target = args[0], args[1]
+        console.print(f"[bold yellow]Inserting snippet '{key}' into {target}[/bold yellow]")
+        console.print("[bold]This would send the request to the snippet manager server...[/bold]")
+        console.print("[dim]In a real implementation, the server would retrieve the snippet and insert it into the target file.[/dim]")
+    
+    else:
+        console.print(f"[bold red]Unknown snippet action: {action}[/bold red]")
+        console.print("[bold]Available actions: get, add, list, insert[/bold]")
+
+def scrape_task(agent, target, selector):
+    """Handle web scraping tasks"""
+    # Find the web scraper provider
+    scraper_provider = None
+    for provider in agent.providers:
+        if hasattr(provider, 'server_name') and provider.server_name == 'web_scraper':
+            scraper_provider = provider
+            break
+    
+    if not scraper_provider:
+        console.print("[bold red]Error: Web scraper server not available.[/bold red]")
+        return
+    
+    console.print(f"[bold yellow]Scraping {target} with selector '{selector}'[/bold yellow]")
+    console.print("[bold]This would send the request to the web scraper server...[/bold]")
+    console.print("[dim]In a real implementation, the server would return scraped content.[/dim]")
+
+def config_task(agent, action, *args):
+    """Handle configuration management tasks"""
+    # Find the config manager provider
+    config_provider = None
+    for provider in agent.providers:
+        if hasattr(provider, 'server_name') and provider.server_name == 'config_manager':
+            config_provider = provider
+            break
+    
+    if not config_provider:
+        console.print("[bold red]Error: Config manager server not available.[/bold red]")
+        return
+    
+    if action == 'view' or action == 'show':
+        console.print(f"[bold yellow]Viewing configuration...[/bold yellow]")
+        console.print("[bold]This would send the request to the config manager server...[/bold]")
+        console.print("[dim]In a real implementation, the server would return the configuration values.[/dim]")
+    
+    elif action == 'edit':
+        if len(args) < 2:
+            console.print("[bold red]Please specify a key and value. Usage: /config edit [key] [value][/bold red]")
+            return
+        key, value = args[0], args[1]
+        console.print(f"[bold yellow]Editing config: {key} = {value}[/bold yellow]")
+        console.print("[bold]This would send the request to the config manager server...[/bold]")
+        console.print("[dim]In a real implementation, the server would update the configuration.[/dim]")
+    
+    elif action == 'list' or action == 'available':
+        console.print("[bold yellow]Listing available configuration files...[/bold yellow]")
+        console.print("[bold]This would send the request to the config manager server...[/bold]")
+        console.print("[dim]In a real implementation, the server would return the list of available config files.[/dim]")
+    
+    else:
+        console.print(f"[bold red]Unknown config action: {action}[/bold red]")
+        console.print("[bold]Available actions: view, edit, list[/bold]")
+
+def schedule_task(agent, task_type, interval, target=None):
+    """Handle scheduling tasks"""
+    # Find the task scheduler provider
+    scheduler_provider = None
+    for provider in agent.providers:
+        if hasattr(provider, 'server_name') and provider.server_name == 'task_scheduler':
+            scheduler_provider = provider
+            break
+    
+    if not scheduler_provider:
+        console.print("[bold red]Error: Task scheduler server not available.[/bold red]")
+        return
+    
+    console.print(f"[bold yellow]Scheduling task: {task_type} every {interval}{' for ' + target if target else ''}[/bold yellow]")
+    console.print("[bold]This would send the request to the task scheduler server...[/bold]")
+    console.print("[dim]In a real implementation, the server would schedule the task to run automatically.[/dim]")
+
 def package_inspect_task(agent, package_name):
     """Handle package inspection tasks"""
     # Find the package inspector provider
@@ -298,6 +417,10 @@ def display_help():
     console.print("  [cyan]/rename [old] [new] [file][/cyan] - Batch rename variables")
     console.print("  [cyan]/plot [metric][/cyan] - Plot code metrics and data")
     console.print("  [cyan]/update_docs [type] [args][/cyan] - Update documentation files")
+    console.print("  [cyan]/snippet [action] [args][/cyan] - Manage code snippets")
+    console.print("  [cyan]/scrape [file_or_dir_or_url] [css_selector][/cyan] - Scrape web content")
+    console.print("  [cyan]/config [action] [args][/cyan] - Manage configurations")
+    console.print("  [cyan]/schedule [task_type] [interval] [target][/cyan] - Schedule tasks to run automatically")
     console.print("  [cyan]/inspect [package][/cyan] - Inspect package information")
     console.print("  [cyan]/plugins[/cyan] - List available plugins")
     console.print("  [cyan]/create_plugin [name][/cyan] - Create a new plugin skeleton")
@@ -320,7 +443,11 @@ def display_help():
     console.print("  [cyan]automation[/cyan] - Automate repetitive coding tasks")
     console.print("  [cyan]visualization[/cyan] - Create plots and visualizations")
     console.print("  [cyan]self_documenting[/cyan] - Auto-update documentation")
-    console.print("  [cyan]package_inspector[/cyan] - Inspect packages and dependencies\n")
+    console.print("  [cyan]package_inspector[/cyan] - Inspect packages and dependencies")
+    console.print("  [cyan]snippet_manager[/cyan] - Manage code snippets and templates")
+    console.print("  [cyan]web_scraper[/cyan] - Scrape web content from files/urls")
+    console.print("  [cyan]config_manager[/cyan] - Manage configurations and credentials")
+    console.print("  [cyan]task_scheduler[/cyan] - Schedule tasks to run automatically\n")
 
 def display_welcome_screen():
     """Display an enhanced welcome screen with project info and instructions"""
@@ -448,12 +575,12 @@ class CustomCompleter(Completer):
                         yield Completion(key, 
                                        display=f"{key} [{info['name']}]",
                                        display_meta=f"{info['provider']}{suffix}")
-            elif command in ['/help', '/clear', '/mcp', '/models', '/dashboard', '/ocr', '/refactor', '/diff', '/plugins', '/create_plugin', '/scaffold', '/env', '/rename', '/plot', '/update_docs', '/inspect', '/exit']:
+            elif command in ['/help', '/clear', '/mcp', '/models', '/dashboard', '/ocr', '/refactor', '/diff', '/plugins', '/create_plugin', '/scaffold', '/env', '/rename', '/plot', '/update_docs', '/inspect', '/snippet', '/scrape', '/config', '/schedule', '/exit']:
                 # Don't provide additional completions if these commands are fully typed
                 pass
             else:
                 # Provide command suggestions for commands that don't require parameters
-                commands = ['/models', '/mcp', '/dashboard', '/ocr', '/refactor', '/diff', '/plugins', '/create_plugin', '/scaffold', '/env', '/rename', '/plot', '/update_docs', '/inspect', '/switch', '/help', '/clear', '/exit']
+                commands = ['/models', '/mcp', '/dashboard', '/ocr', '/refactor', '/diff', '/plugins', '/create_plugin', '/scaffold', '/env', '/rename', '/plot', '/update_docs', '/inspect', '/snippet', '/scrape', '/config', '/schedule', '/switch', '/help', '/clear', '/exit']
                 for cmd in commands:
                     if cmd.startswith(text.lower()):
                         yield Completion(cmd, start_position=-len(text))
@@ -582,6 +709,46 @@ def main():
                     else:
                         console.print("[bold red]Please specify a package name. Usage: /inspect [package_name][/bold red]")
                     continue
+                elif prompt.lower().startswith('/snippet '):
+                    parts = prompt.split(' ', 2)
+                    if len(parts) > 1:
+                        action = parts[1].strip()
+                        snippet_args = parts[2].split(' ') if len(parts) > 2 else []
+                        snippet_task(agent, action, *snippet_args)
+                    else:
+                        console.print("[bold red]Please specify an action. Usage: /snippet [action] [args][/bold red]")
+                        console.print("[bold]Available actions: get, add, list, insert[/bold]")
+                    continue
+                elif prompt.lower().startswith('/scrape '):
+                    parts = prompt.split(' ', 2)
+                    if len(parts) > 1:
+                        target = parts[1].strip()
+                        selector = parts[2].strip() if len(parts) > 2 else '*'
+                        scrape_task(agent, target, selector)
+                    else:
+                        console.print("[bold red]Please specify a target and selector. Usage: /scrape [file_or_dir_or_url] [css_selector][/bold red]")
+                        continue
+                elif prompt.lower().startswith('/config '):
+                    parts = prompt.split(' ', 2)
+                    if len(parts) > 1:
+                        action = parts[1].strip()
+                        config_args = parts[2].split(' ') if len(parts) > 2 else []
+                        config_task(agent, action, *config_args)
+                    else:
+                        console.print("[bold red]Please specify an action. Usage: /config [action] [args][/bold red]")
+                        console.print("[bold]Available actions: view, edit, list[/bold]")
+                        continue
+                elif prompt.lower().startswith('/schedule '):
+                    parts = prompt.split(' ', 3)
+                    if len(parts) > 2:
+                        task_type = parts[1].strip()
+                        interval = parts[2].strip()
+                        target = parts[3].strip() if len(parts) > 3 else None
+                        schedule_task(agent, task_type, interval, target)
+                    else:
+                        console.print("[bold red]Please specify task type and interval. Usage: /schedule [task_type] [interval] [target][/bold red]")
+                        console.print("[bold]Examples: /schedule 'test' 'every 30 mins'; /schedule 'script' 'daily at 09:00' 'my_script.py'[/bold]")
+                        continue
                 elif prompt.lower().startswith('/switch '):
                     parts = prompt.split(' ', 1)
                     if len(parts) > 1:

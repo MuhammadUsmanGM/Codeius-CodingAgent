@@ -74,6 +74,26 @@
       "enabled": true,
       "endpoint": "http://localhost:10400",
       "capabilities": ["inspect", "packages", "dependencies", "licenses", "vulnerabilities"]
+    },
+    "snippet_manager": {
+      "enabled": true,
+      "endpoint": "http://localhost:10500",
+      "capabilities": ["snippet", "template", "boilerplate", "code-reuse"]
+    },
+    "web_scraper": {
+      "enabled": true,
+      "endpoint": "http://localhost:10600",
+      "capabilities": ["scrape", "html", "bs4", "web-parser"]
+    },
+    "config_manager": {
+      "enabled": true,
+      "endpoint": "http://localhost:10700",
+      "capabilities": ["config", "settings", "env", "yaml", "toml", "secure-storage"]
+    },
+    "task_scheduler": {
+      "enabled": true,
+      "endpoint": "http://localhost:10800",
+      "capabilities": ["schedule", "cron", "automate", "task", "timer"]
     }
   },
   "plugins": {

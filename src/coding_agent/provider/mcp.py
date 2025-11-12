@@ -58,6 +58,14 @@ class MCPProvider(ProviderBase):
                 return self._self_documenting_server(messages)
             elif self.server_name == "package_inspector":
                 return self._package_inspector_server(messages)
+            elif self.server_name == "snippet_manager":
+                return self._snippet_manager_server(messages)
+            elif self.server_name == "web_scraper":
+                return self._web_scraper_server(messages)
+            elif self.server_name == "config_manager":
+                return self._config_manager_server(messages)
+            elif self.server_name == "task_scheduler":
+                return self._task_scheduler_server(messages)
             else:
                 return self._default_server_interaction(messages)
         except Exception as e:
@@ -409,6 +417,66 @@ class MCPProvider(ProviderBase):
             return f"Package inspector server would analyze requirements from: {last_message[:100]}..."
         else:
             return f"Package inspector server received: {last_message[:100]}... (inspect/package)"
+    
+    def _snippet_manager_server(self, messages):
+        """Handle snippet management requests"""
+        last_message = messages[-1]["content"] if messages else ""
+        
+        # Look for keywords that suggest a snippet management request
+        if any(word in last_message.lower() for word in ["snippet", "template", "boilerplate", "code", "reuse"]):
+            # This is a simplified implementation. In a real implementation, the agent would send
+            # snippet requests to the snippet manager server, but for now we'll just return a message
+            # indicating what would happen.
+            return f"Snippet manager server would handle snippets for: {last_message[:100]}..."
+        elif any(word in last_message.lower() for word in ["code", "template", "pattern", "example"]):
+            return f"Snippet manager server would provide code templates for: {last_message[:100]}..."
+        else:
+            return f"Snippet manager server received: {last_message[:100]}... (snippet/template)"
+    
+    def _web_scraper_server(self, messages):
+        """Handle web scraping requests"""
+        last_message = messages[-1]["content"] if messages else ""
+        
+        # Look for keywords that suggest a web scraping request
+        if any(word in last_message.lower() for word in ["scrape", "html", "parse", "beautifulsoup", "bs4", "web"]):
+            # This is a simplified implementation. In a real implementation, the agent would send
+            # scraping requests to the web scraper server, but for now we'll just return a message
+            # indicating what would happen.
+            return f"Web scraper server would scrape content for: {last_message[:100]}..."
+        elif any(word in last_message.lower() for word in ["extract", "data", "content", "document"]):
+            return f"Web scraper server would extract content for: {last_message[:100]}..."
+        else:
+            return f"Web scraper server received: {last_message[:100]}... (scrape/html)"
+    
+    def _config_manager_server(self, messages):
+        """Handle configuration management requests"""
+        last_message = messages[-1]["content"] if messages else ""
+        
+        # Look for keywords that suggest a configuration management request
+        if any(word in last_message.lower() for word in ["config", "setting", "credential", "env", "environment", ".env", "yaml", "toml", "configuration"]):
+            # This is a simplified implementation. In a real implementation, the agent would send
+            # config management requests to the config manager server, but for now we'll just return a message
+            # indicating what would happen.
+            return f"Config manager server would handle configuration for: {last_message[:100]}..."
+        elif any(word in last_message.lower() for word in ["secret", "password", "token", "key", "auth", "authentication"]):
+            return f"Config manager server would securely store credentials from: {last_message[:100]}..."
+        else:
+            return f"Config manager server received: {last_message[:100]}... (config/settings)"
+    
+    def _task_scheduler_server(self, messages):
+        """Handle task scheduling requests"""
+        last_message = messages[-1]["content"] if messages else ""
+        
+        # Look for keywords that suggest a task scheduling request
+        if any(word in last_message.lower() for word in ["schedule", "cron", "task", "automate", "repeat", "timer", "interval"]):
+            # This is a simplified implementation. In a real implementation, the agent would send
+            # scheduling requests to the task scheduler server, but for now we'll just return a message
+            # indicating what would happen.
+            return f"Task scheduler server would schedule task for: {last_message[:100]}..."
+        elif any(word in last_message.lower() for word in ["run", "execute", "test", "check", "command"]):
+            return f"Task scheduler server would schedule execution of: {last_message[:100]}..."
+        else:
+            return f"Task scheduler server received: {last_message[:100]}... (schedule/task)"
     
     def _default_server_interaction(self, messages):
         """Default interaction for other server types"""
