@@ -10,6 +10,7 @@ from coding_agent.file_ops import FileOps
 from coding_agent.git_ops import GitOps
 from coding_agent.mcp_manager import mcp_manager
 from coding_agent.history_manager import HistoryManager
+from coding_agent.plugin_manager import plugin_manager
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -32,6 +33,10 @@ class CodingAgent:
         self.git_ops = GitOps()
         self.history: List[Dict[str, str]] = []
         self.history_manager = HistoryManager()
+        self.plugin_manager = plugin_manager
+        
+        # Load user plugins
+        self.plugin_manager.load_plugins()
         
         # Check if we have a search MCP provider available
         self.search_provider = None

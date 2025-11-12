@@ -48,6 +48,16 @@ class MCPProvider(ProviderBase):
                 return self._ocr_server(messages)
             elif self.server_name == "refactor":
                 return self._refactor_server(messages)
+            elif self.server_name == "diff":
+                return self._diff_server(messages)
+            elif self.server_name == "automation":
+                return self._automation_server(messages)
+            elif self.server_name == "visualization":
+                return self._visualization_server(messages)
+            elif self.server_name == "self_documenting":
+                return self._self_documenting_server(messages)
+            elif self.server_name == "package_inspector":
+                return self._package_inspector_server(messages)
             else:
                 return self._default_server_interaction(messages)
         except Exception as e:
@@ -320,6 +330,85 @@ class MCPProvider(ProviderBase):
             return f"Refactor server would analyze: {last_message[:100]}..."
         else:
             return f"Refactor server received: {last_message[:100]}... (waiting for code to analyze)"
+    
+    def _diff_server(self, messages):
+        """Handle diff requests for comparing files"""
+        last_message = messages[-1]["content"] if messages else ""
+        
+        # Look for keywords that suggest a diff request
+        if any(word in last_message.lower() for word in ["diff", "compare", "difference", "vs"]):
+            # This is a simplified implementation. In a real implementation, the agent would send
+            # file paths to the diff server, but for now we'll just return a message
+            # indicating what would happen.
+            return f"Diff server would compare files from: {last_message[:100]}..."
+        else:
+            return f"Diff server received: {last_message[:100]}... (waiting for files to compare)"
+    
+    def _automation_server(self, messages):
+        """Handle automation requests for scaffolding, env management, and renaming"""
+        last_message = messages[-1]["content"] if messages else ""
+        
+        # Look for keywords that suggest an automation request
+        if any(word in last_message.lower() for word in ["scaffold", "project", "create", "template"]):
+            # This is a simplified implementation. In a real implementation, the agent would send
+            # scaffolding requests to the automation server, but for now we'll just return a message
+            # indicating what would happen.
+            return f"Automation server would handle scaffolding for: {last_message[:100]}..."
+        elif any(word in last_message.lower() for word in ["env", "environment", "variable", ".env"]):
+            return f"Automation server would manage environment variables for: {last_message[:100]}..."
+        elif any(word in last_message.lower() for word in ["rename", "variable", "change name"]):
+            return f"Automation server would handle variable renaming for: {last_message[:100]}..."
+        else:
+            return f"Automation server received: {last_message[:100]}... (scaffold/env/rename)"
+    
+    def _visualization_server(self, messages):
+        """Handle visualization requests for plotting metrics and data"""
+        last_message = messages[-1]["content"] if messages else ""
+        
+        # Look for keywords that suggest a visualization request
+        if any(word in last_message.lower() for word in ["plot", "chart", "graph", "visualize", "visualization", "data"]):
+            # This is a simplified implementation. In a real implementation, the agent would send
+            # plotting requests to the visualization server, but for now we'll just return a message
+            # indicating what would happen.
+            return f"Visualization server would create plots for: {last_message[:100]}..."
+        elif any(word in last_message.lower() for word in ["metric", "coverage", "complexity", "test"]):
+            return f"Visualization server would plot metrics for: {last_message[:100]}..."
+        else:
+            return f"Visualization server received: {last_message[:100]}... (waiting for data to plot)"
+    
+    def _self_documenting_server(self, messages):
+        """Handle self-documenting requests for updating documentation"""
+        last_message = messages[-1]["content"] if messages else ""
+        
+        # Look for keywords that suggest a documentation update request
+        if any(word in last_message.lower() for word in ["authors", "contributor", "author"]):
+            # This is a simplified implementation. In a real implementation, the agent would send
+            # author update requests to the self-documenting server, but for now we'll just return a message
+            # indicating what would happen.
+            return f"Self-documenting server would update authors based on: {last_message[:100]}..."
+        elif any(word in last_message.lower() for word in ["changelog", "change", "log"]):
+            return f"Self-documenting server would update changelog based on: {last_message[:100]}..."
+        elif any(word in last_message.lower() for word in ["readme", "read me", "documentation"]):
+            return f"Self-documenting server would update README based on: {last_message[:100]}..."
+        elif any(word in last_message.lower() for word in ["doc", "document", "update"]):
+            return f"Self-documenting server would update documentation based on: {last_message[:100]}..."
+        else:
+            return f"Self-documenting server received: {last_message[:100]}... (authors/changelog/readme)"
+    
+    def _package_inspector_server(self, messages):
+        """Handle package inspection requests"""
+        last_message = messages[-1]["content"] if messages else ""
+        
+        # Look for keywords that suggest a package inspection request
+        if any(word in last_message.lower() for word in ["inspect", "package", "dependency", "requirement", "license", "vulnerability"]):
+            # This is a simplified implementation. In a real implementation, the agent would send
+            # package inspection requests to the package inspector server, but for now we'll just return a message
+            # indicating what would happen.
+            return f"Package inspector server would inspect: {last_message[:100]}..."
+        elif any(word in last_message.lower() for word in ["pip", "install", "requirements"]):
+            return f"Package inspector server would analyze requirements from: {last_message[:100]}..."
+        else:
+            return f"Package inspector server received: {last_message[:100]}... (inspect/package)"
     
     def _default_server_interaction(self, messages):
         """Default interaction for other server types"""

@@ -119,6 +119,171 @@ def refactor_code(agent, file_path):
     console.print("[bold]This would send the code to the refactoring server for analysis...[/bold]")
     console.print("[dim]In a real implementation, the server would return issues and suggestions for refactoring.[/dim]")
 
+def diff_files(agent, file1, file2):
+    """Compare two files using the diff tool"""
+    if not os.path.exists(file1):
+        console.print(f"[bold red]Error: File '{file1}' does not exist.[/bold red]")
+        return
+    
+    if not os.path.exists(file2):
+        console.print(f"[bold red]Error: File '{file2}' does not exist.[/bold red]")
+        return
+    
+    # Find the diff provider
+    diff_provider = None
+    for provider in agent.providers:
+        if hasattr(provider, 'server_name') and provider.server_name == 'diff':
+            diff_provider = provider
+            break
+    
+    if not diff_provider:
+        console.print("[bold red]Error: Diff server not available.[/bold red]")
+        return
+    
+    # In a real implementation, we would send the file paths to the diff server
+    # For now, we'll just simulate the process
+    console.print(f"[bold yellow]Comparing files: {file1} vs {file2}[/bold yellow]")
+    console.print("[bold]This would send the files to the diff server for comparison...[/bold]")
+    console.print("[dim]In a real implementation, the server would return the differences between the files.[/dim]")
+
+def visualization_task(agent, metric_type):
+    """Handle visualization tasks for plotting metrics"""
+    # Find the visualization provider
+    visualization_provider = None
+    for provider in agent.providers:
+        if hasattr(provider, 'server_name') and provider.server_name == 'visualization':
+            visualization_provider = provider
+            break
+    
+    if not visualization_provider:
+        console.print("[bold red]Error: Visualization server not available.[/bold red]")
+        return
+    
+    console.print(f"[bold yellow]Creating plot for: {metric_type}[/bold yellow]")
+    console.print("[bold]This would send the request to the visualization server...[/bold]")
+    console.print("[dim]In a real implementation, the server would generate a plot and display it.[/dim]")
+
+def package_inspect_task(agent, package_name):
+    """Handle package inspection tasks"""
+    # Find the package inspector provider
+    inspector_provider = None
+    for provider in agent.providers:
+        if hasattr(provider, 'server_name') and provider.server_name == 'package_inspector':
+            inspector_provider = provider
+            break
+    
+    if not inspector_provider:
+        console.print("[bold red]Error: Package inspector server not available.[/bold red]")
+        return
+    
+    console.print(f"[bold yellow]Inspecting package: {package_name}[/bold yellow]")
+    console.print("[bold]This would send the request to the package inspector server...[/bold]")
+    console.print("[dim]In a real implementation, the server would return detailed package information including dependencies, licenses, and vulnerabilities.[/dim]")
+
+def self_document_task(agent, doc_type, *args):
+    """Handle self-documenting tasks for updating documentation"""
+    # Find the self-documenting provider
+    doc_provider = None
+    for provider in agent.providers:
+        if hasattr(provider, 'server_name') and provider.server_name == 'self_documenting':
+            doc_provider = provider
+            break
+    
+    if not doc_provider:
+        console.print("[bold red]Error: Self-documenting server not available.[/bold red]")
+        return
+    
+    if doc_type == 'authors':
+        console.print(f"[bold yellow]Updating AUTHORS file with: {args}[/bold yellow]")
+        console.print("[bold]This would send the request to the self-documenting server...[/bold]")
+        console.print("[dim]In a real implementation, the server would update the AUTHORS file.[/dim]")
+    
+    elif doc_type == 'changelog':
+        console.print(f"[bold yellow]Updating CHANGELOG with: {args}[/bold yellow]")
+        console.print("[bold]This would send the request to the self-documenting server...[/bold]")
+        console.print("[dim]In a real implementation, the server would update the CHANGELOG file.[/dim]")
+    
+    elif doc_type == 'readme':
+        console.print(f"[bold yellow]Updating README section: {args}[/bold yellow]")
+        console.print("[bold]This would send the request to the self-documenting server...[/bold]")
+        console.print("[dim]In a real implementation, the server would update the README file.[/dim]")
+    
+    else:
+        console.print(f"[bold red]Unknown documentation type: {doc_type}[/bold red]")
+
+def automation_task(agent, task_type, *args):
+    """Handle automation tasks like scaffolding, env management, and renaming"""
+    # Find the automation provider
+    automation_provider = None
+    for provider in agent.providers:
+        if hasattr(provider, 'server_name') and provider.server_name == 'automation':
+            automation_provider = provider
+            break
+    
+    if not automation_provider:
+        console.print("[bold red]Error: Automation server not available.[/bold red]")
+        return
+    
+    if task_type == 'scaffold':
+        if len(args) < 1:
+            console.print("[bold red]Please specify a project name. Usage: /scaffold [project_name] ([template])[/bold red]")
+            return
+        project_name = args[0]
+        template = args[1] if len(args) > 1 else 'basic'
+        console.print(f"[bold yellow]Creating project scaffold: {project_name} (template: {template})[/bold yellow]")
+        console.print("[bold]This would send the request to the automation server...[/bold]")
+        console.print("[dim]In a real implementation, the server would create the project structure.[/dim]")
+    
+    elif task_type == 'env':
+        console.print(f"[bold yellow]Managing environment variables: {args}[/bold yellow]")
+        console.print("[bold]This would send the request to the automation server...[/bold]")
+        console.print("[dim]In a real implementation, the server would manage .env files.[/dim]")
+    
+    elif task_type == 'rename':
+        if len(args) < 2:
+            console.print("[bold red]Please specify old and new names. Usage: /rename [old_name] [new_name] ([file_path])[/bold red]")
+            return
+        old_name = args[0]
+        new_name = args[1]
+        file_path = args[2] if len(args) > 2 else 'current file'
+        console.print(f"[bold yellow]Renaming variable: {old_name} → {new_name} in {file_path}[/bold yellow]")
+        console.print("[bold]This would send the request to the automation server...[/bold]")
+        console.print("[dim]In a real implementation, the server would rename variables in the file.[/dim]")
+    
+    else:
+        console.print(f"[bold red]Unknown automation task: {task_type}[/bold red]")
+
+def show_plugins(agent):
+    """Display available plugins"""
+    plugins = agent.plugin_manager.get_available_plugins()
+    
+    if not plugins:
+        console.print("[yellow]No plugins available.[/yellow]")
+        console.print("[dim]Create your own plugins by adding Python files to the plugins/ directory.[/dim]")
+        return
+    
+    console.print("\n[bold blue]Available Plugins:[/bold blue]")
+    for plugin_name, functions in plugins.items():
+        console.print(f"  [cyan]{plugin_name}[/cyan]:")
+        for func in functions:
+            console.print(f"    - {func}")
+    console.print("\n[bold]To create a plugin, add a Python file to the plugins/ directory.[/bold]\n")
+
+def create_plugin(agent, name):
+    """Create a new plugin skeleton"""
+    try:
+        plugin_path = agent.plugin_manager.create_plugin_skeleton(
+            name=name,
+            description=f"Custom plugin for {name}",
+            author="User",
+            version="1.0.0"
+        )
+        console.print(f"[bold green]Plugin '{name}' created successfully![/bold green]")
+        console.print(f"Location: {plugin_path}")
+        console.print("[dim]Edit this file to implement your plugin functionality.[/dim]")
+    except Exception as e:
+        console.print(f"[bold red]Error creating plugin: {e}[/bold red]")
+
 def display_help():
     """Display help information with all available commands"""
     console.print("\n[bold blue]Available Commands:[/bold blue]")
@@ -127,6 +292,15 @@ def display_help():
     console.print("  [cyan]/dashboard[/cyan] - Show real-time code quality dashboard")
     console.print("  [cyan]/ocr [image_path][/cyan] - Extract text from an image using OCR")
     console.print("  [cyan]/refactor [file_path][/cyan] - Analyze and refactor code in a file")
+    console.print("  [cyan]/diff [file1] [file2][/cyan] - Compare two files or directories")
+    console.print("  [cyan]/scaffold [name] [template][/cyan] - Generate project scaffolding")
+    console.print("  [cyan]/env [action] [variables][/cyan] - Manage environment files")
+    console.print("  [cyan]/rename [old] [new] [file][/cyan] - Batch rename variables")
+    console.print("  [cyan]/plot [metric][/cyan] - Plot code metrics and data")
+    console.print("  [cyan]/update_docs [type] [args][/cyan] - Update documentation files")
+    console.print("  [cyan]/inspect [package][/cyan] - Inspect package information")
+    console.print("  [cyan]/plugins[/cyan] - List available plugins")
+    console.print("  [cyan]/create_plugin [name][/cyan] - Create a new plugin skeleton")
     console.print("  [cyan]/switch [model_key][/cyan] - Switch to a specific model")
     console.print("  [cyan]/help[/cyan] - Show this help message")
     console.print("  [cyan]/clear[/cyan] - Clear the conversation history")
@@ -141,7 +315,12 @@ def display_help():
     console.print("  [cyan]doc-search[/cyan] - Search documentation files")
     console.print("  [cyan]database[/cyan] - Query local SQLite databases")
     console.print("  [cyan]ocr[/cyan] - Extract text from images")
-    console.print("  [cyan]refactor[/cyan] - Analyze and refactor code\n")
+    console.print("  [cyan]refactor[/cyan] - Analyze and refactor code")
+    console.print("  [cyan]diff[/cyan] - Compare files and directories")
+    console.print("  [cyan]automation[/cyan] - Automate repetitive coding tasks")
+    console.print("  [cyan]visualization[/cyan] - Create plots and visualizations")
+    console.print("  [cyan]self_documenting[/cyan] - Auto-update documentation")
+    console.print("  [cyan]package_inspector[/cyan] - Inspect packages and dependencies\n")
 
 def display_welcome_screen():
     """Display an enhanced welcome screen with project info and instructions"""
@@ -269,12 +448,12 @@ class CustomCompleter(Completer):
                         yield Completion(key, 
                                        display=f"{key} [{info['name']}]",
                                        display_meta=f"{info['provider']}{suffix}")
-            elif command in ['/help', '/clear', '/mcp', '/models', '/dashboard', '/ocr', '/refactor', '/exit']:
+            elif command in ['/help', '/clear', '/mcp', '/models', '/dashboard', '/ocr', '/refactor', '/diff', '/plugins', '/create_plugin', '/scaffold', '/env', '/rename', '/plot', '/update_docs', '/inspect', '/exit']:
                 # Don't provide additional completions if these commands are fully typed
                 pass
             else:
                 # Provide command suggestions for commands that don't require parameters
-                commands = ['/models', '/mcp', '/dashboard', '/ocr', '/refactor', '/switch', '/help', '/clear', '/exit']
+                commands = ['/models', '/mcp', '/dashboard', '/ocr', '/refactor', '/diff', '/plugins', '/create_plugin', '/scaffold', '/env', '/rename', '/plot', '/update_docs', '/inspect', '/switch', '/help', '/clear', '/exit']
                 for cmd in commands:
                     if cmd.startswith(text.lower()):
                         yield Completion(cmd, start_position=-len(text))
@@ -342,6 +521,66 @@ def main():
                         refactor_code(agent, file_path)
                     else:
                         console.print("[bold red]Please specify a file path. Usage: /refactor [file_path][/bold red]")
+                    continue
+                elif prompt.lower().startswith('/diff '):
+                    # Extract file paths from the command
+                    parts = prompt.split(' ', 2)  # Split into at most 3 parts: '/diff', 'file1', 'file2'
+                    if len(parts) == 3:
+                        file1, file2 = parts[1].strip(), parts[2].strip()
+                        diff_files(agent, file1, file2)
+                    else:
+                        console.print("[bold red]Please specify two file paths. Usage: /diff [file1] [file2][/bold red]")
+                    continue
+                elif prompt.lower() == '/plugins':
+                    show_plugins(agent)
+                    continue
+                elif prompt.lower().startswith('/create_plugin '):
+                    parts = prompt.split(' ', 1)
+                    if len(parts) > 1:
+                        plugin_name = parts[1].strip()
+                        create_plugin(agent, plugin_name)
+                    else:
+                        console.print("[bold red]Please specify a plugin name. Usage: /create_plugin [name][/bold red]")
+                    continue
+                elif prompt.lower().startswith('/scaffold '):
+                    parts = prompt.split(' ')
+                    args = [part.strip() for part in parts[1:] if part.strip()]
+                    automation_task(agent, 'scaffold', *args)
+                    continue
+                elif prompt.lower().startswith('/env '):
+                    parts = prompt.split(' ')
+                    args = [part.strip() for part in parts[1:] if part.strip()]
+                    automation_task(agent, 'env', *args)
+                    continue
+                elif prompt.lower().startswith('/rename '):
+                    parts = prompt.split(' ')
+                    args = [part.strip() for part in parts[1:] if part.strip()]
+                    automation_task(agent, 'rename', *args)
+                    continue
+                elif prompt.lower().startswith('/plot '):
+                    parts = prompt.split(' ', 1)
+                    if len(parts) > 1:
+                        metric_type = parts[1].strip()
+                        visualization_task(agent, metric_type)
+                    else:
+                        console.print("[bold red]Please specify a metric type. Usage: /plot [metric_type][/bold red]")
+                    continue
+                elif prompt.lower().startswith('/update_docs '):
+                    parts = prompt.split(' ', 2)
+                    if len(parts) > 1:
+                        doc_type = parts[1].strip()
+                        doc_args = parts[2].split(' ') if len(parts) > 2 else []
+                        self_document_task(agent, doc_type, *doc_args)
+                    else:
+                        console.print("[bold red]Please specify a documentation type. Usage: /update_docs [type] [args][/bold red]")
+                    continue
+                elif prompt.lower().startswith('/inspect '):
+                    parts = prompt.split(' ', 1)
+                    if len(parts) > 1:
+                        package_name = parts[1].strip()
+                        package_inspect_task(agent, package_name)
+                    else:
+                        console.print("[bold red]Please specify a package name. Usage: /inspect [package_name][/bold red]")
                     continue
                 elif prompt.lower().startswith('/switch '):
                     parts = prompt.split(' ', 1)

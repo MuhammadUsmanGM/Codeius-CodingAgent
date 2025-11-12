@@ -22,78 +22,94 @@ class MCPServerConfig(BaseModel):
 class MCPServerManager:
     """Manager for MCP servers that can provide access to various tools and services"""
     
-    def __init__(self):
+    def __init__(self, settings_path: str = "settings.json"):
         self.servers: Dict[str, MCPServerConfig] = {}
-        self._initialize_default_servers()
+        self.settings_path = settings_path
+        self._initialize_servers_from_settings()
     
-    def _initialize_default_servers(self):
-        """Initialize default builtin MCP servers"""
-        # Built-in MCP servers for various capabilities
-        builtin_servers = [
-            MCPServerConfig(
-                name="code-runner",
-                description="Server to run Python code in a sandboxed environment",
-                endpoint="http://localhost:9000",
-                capabilities=["code-execution", "python"]
-            ),
-            MCPServerConfig(
-                name="filesystem",
-                description="Server to access and manage files in the workspace",
-                endpoint="http://localhost:9100",
-                capabilities=["file-operations", "read-files", "list-files"]
-            ),
-            MCPServerConfig(
-                name="duckduckgo",
-                description="Server to perform web searches using DuckDuckGo",
-                endpoint="http://localhost:9200",
-                capabilities=["web-search", "search"]
-            ),
-            MCPServerConfig(
-                name="code-search",
-                description="Server to search code for functions, classes, and TODOs",
-                endpoint="http://localhost:9300",
-                capabilities=["code-search", "function", "class", "todo"]
-            ),
-            MCPServerConfig(
-                name="shell",
-                description="Server to execute safe shell commands",
-                endpoint="http://localhost:9400",
-                capabilities=["shell", "command-execution"]
-            ),
-            MCPServerConfig(
-                name="testing",
-                description="Server to run automated tests",
-                endpoint="http://localhost:9500",
-                capabilities=["testing", "pytest", "unittest"]
-            ),
-            MCPServerConfig(
-                name="doc-search",
-                description="Server to search documentation files",
-                endpoint="http://localhost:9600",
-                capabilities=["doc-search", "md-search", "documentation"]
-            ),
-            MCPServerConfig(
-                name="database",
-                description="Server to query local SQLite databases",
-                endpoint="http://localhost:9700",
-                capabilities=["sql", "sqlite", "database"]
-            ),
-            MCPServerConfig(
-                name="ocr",
-                description="Server to perform OCR on images",
-                endpoint="http://localhost:9800",
-                capabilities=["ocr", "image-processing", "text-extraction"]
-            ),
-            MCPServerConfig(
-                name="refactor",
-                description="Server to analyze and refactor code",
-                endpoint="http://localhost:9900",
-                capabilities=["refactoring", "code-quality", "analysis"]
-            )
-        ]
+    def _initialize_servers_from_settings(self):
+        """Initialize servers based on settings configuration"""
+        # Load settings from the settings.json file
+        settings = self._load_settings()
         
-        for server in builtin_servers:
-            self.servers[server.name] = server
+        if "mcp_servers" in settings:
+            for server_name, server_config in settings["mcp_servers"].items():
+                if server_config.get("enabled", True):
+                    self.servers[server_name] = MCPServerConfig(
+                        name=server_name,
+                        description=f"Server for {server_name.replace('-', ' ')}",
+                        endpoint=server_config.get("endpoint", f"http://localhost:8000"),
+                        enabled=server_config.get("enabled", True),
+                        capabilities=server_config.get("capabilities", [])
+                    )
+    
+    def _load_settings(self) -> Dict[str, Any]:
+        """Load settings from the settings file"""
+        try:
+            with open(self.settings_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            print(f"Settings file {self.settings_path} not found. Using defaults.")
+            # Return default configuration
+            return {
+                "mcp_servers": {
+                    "code-runner": {
+                        "enabled": True,
+                        "endpoint": "http://localhost:9000",
+                        "capabilities": ["code-execution", "python"]
+                    },
+                    "filesystem": {
+                        "enabled": True,
+                        "endpoint": "http://localhost:9100",
+                        "capabilities": ["file-operations", "read-files", "list-files"]
+                    },
+                    "duckduckgo": {
+                        "enabled": True,
+                        "endpoint": "http://localhost:9200",
+                        "capabilities": ["web-search", "search"]
+                    },
+                    "code-search": {
+                        "enabled": True,
+                        "endpoint": "http://localhost:9300",
+                        "capabilities": ["code-search", "function", "class", "todo"]
+                    },
+                    "shell": {
+                        "enabled": True,
+                        "endpoint": "http://localhost:9400",
+                        "capabilities": ["shell", "command-execution"]
+                    },
+                    "testing": {
+                        "enabled": True,
+                        "endpoint": "http://localhost:9500",
+                        "capabilities": ["testing", "pytest", "unittest"]
+                    },
+                    "doc-search": {
+                        "enabled": True,
+                        "endpoint": "http://localhost:9600",
+                        "capabilities": ["doc-search", "md-search", "documentation"]
+                    },
+                    "database": {
+                        "enabled": True,
+                        "endpoint": "http://localhost:9700",
+                        "capabilities": ["sql", "sqlite", "database"]
+                    },
+                    "ocr": {
+                        "enabled": True,
+                        "endpoint": "http://localhost:9800",
+                        "capabilities": ["ocr", "image-processing", "text-extraction"]
+                    },
+                    "refactor": {
+                        "enabled": True,
+                        "endpoint": "http://localhost:9900",
+                        "capabilities": ["refactoring", "code-quality", "analysis"]
+                    },
+                    "diff": {
+                        "enabled": True,
+                        "endpoint": "http://localhost:10000",
+                        "capabilities": ["diff", "comparison", "file-comparison"]
+                    }
+                }
+            }
     
     def list_servers(self) -> List[MCPServerConfig]:
         """List all available MCP servers"""

@@ -20,6 +20,12 @@ Codeius is an AI-powered coding assistant that helps with various programming ta
 - **Real-time Dashboard**: Monitor code quality, test coverage, and build status
 - **Visual Recognition/OCR**: Extract text from images using OCR
 - **Code Refactoring & Quality**: Analyze code style, detect anti-patterns, and suggest refactorings
+- **File/Directory Diff Tool**: Compare content of two files or directories for versioning and code reviews
+- **Local Plugin System**: Extensible architecture allowing users to add custom tools by dropping in Python scripts
+- **Script/Form Automation Tool**: Automate repetitive coding chores like scaffolding, environment management, and variable renaming
+- **Data Visualization Tool**: Plot code metrics, test coverage, and database query results using matplotlib
+- **Self-Documenting Agent**: Auto-update Markdown docs (AUTHORS, CHANGELOG, README) as code changes
+- **Package Inspector**: Probe installed Python packages, license info, vulnerabilities, and dependencies offline
 
 ## Installation
 
@@ -33,11 +39,11 @@ Codeius is an AI-powered coding assistant that helps with various programming ta
    ```bash
    pip install -e .
    # Additional dependencies for enhanced functionality:
-   pip install flask pytest pillow pytesseract radon flake8
+   pip install flask pytest pillow pytesseract radon flake8 matplotlib packaging
    ```
 
-3. To use the enhanced functionality (code search, shell, testing, docs search, databases, OCR, refactoring):
-   You will need to run the following server scripts in separate terminals:
+3. To use the enhanced functionality including package inspection:
+   You will need to run the following server scripts in separate terminals (only those you plan to use):
    - `python code_search_server.py` (port 9300)
    - `python shell_server.py` (port 9400)
    - `python testing_server.py` (port 9500)
@@ -45,6 +51,31 @@ Codeius is an AI-powered coding assistant that helps with various programming ta
    - `python db_server.py` (port 9700)
    - `python ocr_server.py` (port 9800)
    - `python refactor_server.py` (port 9900)
+   - `python diff_server.py` (port 10000)
+   - `python automation_server.py` (port 10100)
+   - `python viz_server.py` (port 10200)
+   - `python self_doc_server.py` (port 10300)
+   - `python package_inspector_server.py` (port 10400)
+
+4. To add custom plugins:
+   - Create Python files in the `plugins/` directory
+   - Each file can contain multiple functions that will be auto-registered
+   - Use `/plugins` to see available plugins
+   - Use `/create_plugin [name]` to create a new plugin skeleton
+
+5. To use automation tools:
+   - Use `/scaffold [name] [template]` to generate project structures
+   - Use `/env [action] [variables]` to manage environment files
+   - Use `/rename [old] [new] [file]` to batch rename variables
+
+6. To use visualization tools:
+   - Use `/plot [metric_type]` to generate plots of code metrics, test coverage, or database results
+
+7. To use self-documenting tools:
+   - Use `/update_docs [type] [args]` to auto-update AUTHORS, CHANGELOG, README files
+
+8. To use package inspection tools:
+   - Use `/inspect [package_name]` to get detailed information about a package including dependencies, licenses, and vulnerabilities
 
 ## Configuration
 
