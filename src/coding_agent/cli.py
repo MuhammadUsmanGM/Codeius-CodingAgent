@@ -15,6 +15,8 @@ import pyfiglet
 from prompt_toolkit import PromptSession
 from prompt_toolkit.styles import Style
 from prompt_toolkit.formatted_text import HTML
+from prompt_toolkit.completion import Completer, Completion
+from prompt_toolkit.shortcuts import CompleteStyle
 load_dotenv()
 
 console = Console()
@@ -85,25 +87,129 @@ def display_conversation_history(agent):
             console.print(f"[magenta]🤖 Agent ({i+1}):[/magenta] {content_preview}{'...' if len(content) > 100 else ''}")
     console.print()  # Add spacing
 
+def display_models(agent):
+    """Display available models to the user"""
+    models = agent.get_available_models()
+    current_model = agent.get_current_model_info()
+    
+    if not models:
+        console.print("[yellow]No models available.[/yellow]")
+        return
+    
+    console.print("\n[bold blue]Available Models:[/bold blue]")
+    for key, model_info in models.items():
+        if current_model and key == current_model['key']:
+            # Highlight the currently active model
+            console.print(f"  [green]→ {key}[/green]: {model_info['name']} ({model_info['provider']}) [Current]")
+        else:
+            console.print(f"  [cyan]{key}[/cyan]: {model_info['name']} ({model_info['provider']})")
+    console.print("\n[bold]To switch models, use: /switch [model_key][/bold]\n")
+
+class CustomCompleter(Completer):
+    def __init__(self, agent):
+        self.agent = agent
+
+    def get_completions(self, document, complete_event):
+        text = document.text_before_cursor
+        if text.startswith('/'):
+            # Split the text to see if we're in a command or sub-command
+            parts = text.split(' ', 1)
+            command = parts[0].lower()
+            
+            if command == '/switch' or command.startswith('/switch'):
+                # Show all models when user types /switch (with or without space)
+                # The key is to check if we're after the /switch command
+                if len(parts) > 1:
+                    # User has started typing a model name after /switch, suggest matching models
+                    typed_model = parts[1].lower()
+                    models = self.agent.get_available_models()
+                    current_model = self.agent.get_current_model_info()
+                    for key, info in models.items():
+                        if typed_model in key.lower() or typed_model in info['name'].lower():
+                            # Highlight current model differently if possible
+                            suffix = " [Current]" if (current_model and key == current_model['key']) else ""
+                            yield Completion(key, start_position=-len(typed_model), 
+                                           display=f"{key} [{info['name']}]",
+                                           display_meta=f"{info['provider']}{suffix}")
+                else:
+                    # Show all models when user types /switch without any additional text
+                    models = self.agent.get_available_models()
+                    current_model = self.agent.get_current_model_info()
+                    for key, info in models.items():
+                        # Highlight current model in the suggestions
+                        suffix = " [Current]" if (current_model and key == current_model['key']) else ""
+                        yield Completion(key, 
+                                       display=f"{key} [{info['name']}]",
+                                       display_meta=f"{info['provider']}{suffix}")
+            elif command in ['/models', '/switch', '/exit', '/quit', '/bye']:
+                # Don't provide additional completions if the command is fully typed
+                pass
+            else:
+                # Provide command suggestions
+                commands = ['/models', '/switch', '/exit', '/quit', '/bye']
+                for cmd in commands:
+                    if cmd.startswith(text.lower()):
+                        yield Completion(cmd, start_position=-len(text))
+
+
 def main():
     display_welcome_screen()
 
     agent = CodingAgent()
 
-    # Create a prompt session with styling for a better input experience
+    # Create a custom completer that handles both commands and model suggestions
+    completer = CustomCompleter(agent)
+
+    # Create a prompt session with styling and custom completion for a better input experience
     style = Style.from_dict({
         'prompt': 'bold cyan',
+        'completion-menu': 'bg:#262626 #ffffff',
+        'completion-menu.completion.current': 'bg:#4a4a4a #ffffff',
+        'completion-menu.meta.completion': 'bg:#262626 #ffffff',
+        'completion-menu.meta.completion.current': 'bg:#4a4a4a #ffffff',
     })
     
-    session = PromptSession(style=style)
+    session = PromptSession(
+        completer=completer,
+        style=style,
+        complete_while_typing=True,
+    )
 
     while True:
         try:
-            # Styled prompt with more distinct visual indicator
+            # Styled prompt with more distinct visual indicator and auto-completion
             prompt_text = HTML('<style fg="cyan" bg="black">⌨️ Enter your query: </style> ')
-            prompt = session.prompt(prompt_text, default='').strip()
+            prompt = session.prompt(
+                prompt_text,
+                default='',
+                complete_style=CompleteStyle.MULTI_COLUMN
+            ).strip()
 
             if not prompt: continue
+            
+            # Handle special commands
+            if prompt.startswith('/'):
+                if prompt.lower() == '/models':
+                    display_models(agent)
+                    continue
+                elif prompt.lower().startswith('/switch '):
+                    parts = prompt.split(' ', 1)
+                    if len(parts) > 1:
+                        model_key = parts[1].strip()
+                        result = agent.switch_model(model_key)
+                        console.print(Panel(result, title="[bold green]Model Switch[/bold green]", expand=False))
+                        continue
+                    else:
+                        console.print("[bold red]Please specify a model. Use /models to see available models.[/bold red]")
+                        continue
+                elif prompt.lower() in ("exit", "quit", "bye"):
+                    # This handles the case when user types /exit, /quit, or /bye
+                    pass
+                else:
+                    console.print(f"[bold red]Unknown command: {prompt}[/bold red]")
+                    console.print("[bold yellow]Available commands: /models, /switch [model_key][/bold yellow]")
+                    continue
+
             if prompt.lower() in ("exit", "quit", "bye"):
                 # Display conversation history before exiting
                 console.print(Panel("[bold yellow]Conversation Summary[/bold yellow]", expand=False))
