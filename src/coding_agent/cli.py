@@ -2,6 +2,9 @@
 
 import sys
 import os
+import time
+from threading import Thread
+from typing import Generator
 from coding_agent.agent import CodingAgent
 from coding_agent.dashboard import Dashboard
 from dotenv import load_dotenv
@@ -13,12 +16,15 @@ from rich.table import Table
 from rich.box import HEAVY_HEAD
 from rich import print as rprint
 from rich.rule import Rule
+from rich.progress import Progress, SpinnerColumn, TextColumn
 import pyfiglet
 from prompt_toolkit import PromptSession
 from prompt_toolkit.styles import Style
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.shortcuts import CompleteStyle
+from prompt_toolkit.shortcuts import prompt
+from prompt_toolkit.patch_stdout import patch_stdout
 load_dotenv()
 
 console = Console()
@@ -403,12 +409,22 @@ def create_plugin(agent, name):
     except Exception as e:
         console.print(f"[bold red]Error creating plugin: {e}[/bold red]")
 
+def display_themes():
+    """Display available themes and allow user to customize the interface"""
+    console.print("\n[bold #9370DB]Visual Themes:[/bold #9370DB]")
+    console.print("  [cyan]default[/cyan] - Standard theme with blue and magenta accents")
+    console.print("  [cyan]dark[/cyan] - Dark theme optimized for low-light environments")
+    console.print("  [cyan]solarized[/cyan] - Solarized color scheme for eye comfort")
+    console.print("  [cyan]terminal[/cyan] - Classic terminal look with green accents\n")
+    console.print("[bold]To change theme, modify the colors in the CLI code directly.[/bold]\n")
+
 def display_help():
     """Display help information with all available commands"""
-    console.print("\n[bold blue]Available Commands:[/bold blue]")
+    console.print("\n[bold #9370DB]Available Commands:[/bold #9370DB]")
     console.print("  [cyan]/models[/cyan] - List all available AI models")
     console.print("  [cyan]/mcp[/cyan] - List available MCP tools")
     console.print("  [cyan]/dashboard[/cyan] - Show real-time code quality dashboard")
+    console.print("  [cyan]/themes[/cyan] - Show available visual themes")
     console.print("  [cyan]/ocr [image_path][/cyan] - Extract text from an image using OCR")
     console.print("  [cyan]/refactor [file_path][/cyan] - Analyze and refactor code in a file")
     console.print("  [cyan]/diff [file1] [file2][/cyan] - Compare two files or directories")
@@ -428,7 +444,7 @@ def display_help():
     console.print("  [cyan]/help[/cyan] - Show this help message")
     console.print("  [cyan]/clear[/cyan] - Clear the conversation history")
     console.print("  [cyan]/exit[/cyan] - Exit the application\n")
-    console.print("[bold blue]MCP Tools Available:[/bold blue]")
+    console.print("[bold #9370DB]MCP Tools Available:[/bold #9370DB]")
     console.print("  [cyan]code-runner[/cyan] - Execute Python code in sandboxed environment")
     console.print("  [cyan]filesystem[/cyan] - Access and manage files in workspace")
     console.print("  [cyan]duckduckgo[/cyan] - Perform web searches")
@@ -453,57 +469,79 @@ def display_welcome_screen():
     """Display an enhanced welcome screen with project info and instructions"""
     # Display beautiful ASCII art for CODEIUS with improved font
     ascii_art = pyfiglet.figlet_format("CODEIUS", font="slant")
-    console.print(f"[bold magenta]{ascii_art}[/bold magenta]")
-    
+    console.print(f"[bold #8A2BE2]{ascii_art}[/bold #8A2BE2]")  # Deep purple color
+
     # Create a welcome table with project information
-    welcome_table = Table(title="Welcome to Codeius AI Coding Agent", 
-                         title_style="bold blue",
-                         box=HEAVY_HEAD,
-                         border_style="bright_blue",
-                         expand=True)
-    
-    welcome_table.add_column("Feature", style="cyan", no_wrap=True)
-    welcome_table.add_column("Description", style="white")
-    
-    welcome_table.add_row("📝 File Operations", "Read and write source files in the workspace")
-    welcome_table.add_row("📦 Git Operations", "Perform git operations (stage, commit)")
-    welcome_table.add_row("🌐 Web Search", "Perform real-time web searches via DuckDuckGo (no API key needed)")
-    welcome_table.add_row("🤖 AI Integration", "Powered by multiple LLM providers (Groq, Google)")
-    welcome_table.add_row("🛠️ MCP Servers", "Access additional tools via MCP protocol (code search, shell, testing, docs, databases)")
-    welcome_table.add_row("📊 Dashboard", "Real-time code quality, test coverage, and build metrics")
-    
-    console.print(welcome_table)
-    
-    # Instructions panel
-    instructions = (
-        "[bold yellow]How to use:[/bold yellow]\n"
-        "• Type your coding instructions in the input field\n"
-        "• The agent will analyze your request and suggest actions\n"
-        "• You'll be prompted to confirm any file changes or git operations\n"
-        "• Type 'exit', 'quit', or 'bye' to exit the application\n"
+    welcome_table = Table(
+        title="[bold #9370DB]Welcome to Codeius AI Coding Agent[/bold #9370DB]",
+        title_style="bold #9370DB",
+        box=HEAVY_HEAD,
+        border_style="#9370DB",
+        expand=True,
+        padding=(0, 1)
     )
-    console.print(Panel(instructions, title="[bold green]Instructions[/bold green]", expand=False))
-    
-    # Add a separator
-    console.print(Rule(style="dim"))
+
+    welcome_table.add_column("Feature", style="#7CFC00", no_wrap=True)  # Chartreuse green
+    welcome_table.add_column("Description", style="white")
+
+    welcome_table.add_row("File Operations", "Read and write source files in the workspace")
+    welcome_table.add_row("Git Operations", "Perform git operations (stage, commit)")
+    welcome_table.add_row("Web Search", "Perform real-time web searches via DuckDuckGo (no API key needed)")
+    welcome_table.add_row("AI Integration", "Powered by multiple LLM providers (Groq, Google)")
+    welcome_table.add_row("MCP Servers", "Access additional tools via MCP protocol (code search, shell, testing, docs, databases)")
+    welcome_table.add_row("Dashboard", "Real-time code quality, test coverage, and build metrics")
+
+    console.print(welcome_table)
+
+    # Instructions panel with gradient-like effect
+    console.print("\n[bold #7CFC00]How to Use:[/bold #7CFC00]")
+    instructions_text = (
+        "- Type your coding instructions in the input field\n"
+        "- The agent will analyze your request and suggest actions\n"
+        "- You'll be prompted to confirm any file changes or git operations\n"
+        "- Type 'exit', 'quit', or 'bye' to exit the application\n"
+        "- Use commands starting with [bold #00FFFF]/[/bold #00FFFF] for special features\n"
+    )
+    console.print(Panel(
+        instructions_text,
+        title="[bold #40E0D0]Instructions[/bold #40E0D0]",
+        expand=False,
+        border_style="#40E0D0"  # Turquoise
+    ))
+
+    # Add a decorative separator
+    console.print(Rule("[bold #BA55D3]Powered by Advanced AI[/bold #BA55D3]", style="#BA55D3", align="center"))
+    console.print()  # Extra spacing
+
+def show_loading_animation(stop_event):
+    """Show a loading animation while waiting for agent response"""
+    symbols = ['|', '/', '-', '\\']
+    i = 0
+    while not stop_event.is_set():
+        sys.stdout.write(f'\r[bold #00FFFF]{symbols[i % len(symbols)]} Thinking...[/bold #00FFFF]')
+        sys.stdout.flush()
+        i += 1
+        time.sleep(0.1)
+    sys.stdout.write('\r')  # Clear the loading message
+    sys.stdout.flush()
 
 def display_conversation_history(agent):
     """Display a summary of the conversation history"""
     if not agent.history:
         console.print("[italic dim]No conversation history yet.[/italic dim]")
         return
-        
-    console.print("\n[bold blue]Conversation History:[/bold blue]")
+
+    console.print("\n[bold #9370DB]Conversation History:[/bold #9370DB]")
     for i, entry in enumerate(agent.history):
         role = entry["role"]
         content = entry["content"]
         if role == "user":
-            console.print(f"[cyan]👤 You ({i+1}):[/cyan] {content[:100]}{'...' if len(content) > 100 else ''}")
+            console.print(f"[#7CFC00]You ({i+1}):[/#7CFC00] {content[:100]}{'...' if len(content) > 100 else ''}")
         elif role == "assistant":
             content_preview = content[:100]
             # Remove any leading/trailing newlines or extra whitespace
             content_preview = content_preview.strip()
-            console.print(f"[magenta]🤖 Agent ({i+1}):[/magenta] {content_preview}{'...' if len(content) > 100 else ''}")
+            console.print(f"[#BA55D3]Agent ({i+1}):[/#BA55D3] {content_preview}{'...' if len(content) > 100 else ''}")
     console.print()  # Add spacing
 
 def display_models(agent):
@@ -611,11 +649,19 @@ def main():
     while True:
         try:
             # Styled prompt with more distinct visual indicator and auto-completion
-            prompt_text = HTML('<style fg="cyan" bg="black">⌨️ Enter your query: </style> ')
+            prompt_text = HTML('<style fg="#00FFFF" bg="black">🤖 Enter your query: </style> ')
             prompt = session.prompt(
                 prompt_text,
                 default='',
-                complete_style=CompleteStyle.MULTI_COLUMN
+                complete_style=CompleteStyle.MULTI_COLUMN,
+                style=Style.from_dict({
+                    'prompt': 'bold #00FFFF',
+                    'text': 'white',
+                    'completion-menu': 'bg:#262626 #ffffff',
+                    'completion-menu.completion.current': 'bg:#4a4a4a #ffffff',
+                    'completion-menu.meta.completion': 'bg:#262626 #ffffff',
+                    'completion-menu.meta.completion.current': 'bg:#4a4a4a #ffffff',
+                })
             ).strip()
 
             if not prompt: continue
@@ -630,6 +676,9 @@ def main():
                     continue
                 elif prompt.lower() == '/dashboard':
                     display_dashboard()
+                    continue
+                elif prompt.lower() == '/themes':
+                    display_themes()
                     continue
                 elif prompt.lower().startswith('/ocr '):
                     # Extract image path from the command
@@ -764,39 +813,65 @@ def main():
                     continue
                 elif prompt.lower() == '/clear':
                     agent.reset_history()
-                    console.print("[bold green]✅ Conversation history cleared.[/bold green]")
+                    console.print("[bold #32CD32]✅ Conversation history cleared.[/bold #32CD32]")
+                    continue
+                elif prompt.lower() == '/cls' or prompt.lower() == '/clear_screen':
+                    # Clear the entire screen with a visual effect
+                    console.clear()
+                    display_welcome_screen()
                     continue
                 elif prompt.lower() == '/exit':
                     # Allow user to exit using /exit command
                     # Display conversation history before exiting
                     console.print(Panel("[bold yellow]Conversation Summary[/bold yellow]", expand=False))
                     display_conversation_history(agent)
-                    console.print("\n[bold green]👋 Thank you for using Codeius! Goodbye![/bold green]")
+                    console.print("\n[bold #32CD32]👋 Thank you for using Codeius! Goodbye![/bold #32CD32]")
                     break
                 else:
                     console.print(f"[bold red]Unknown command: {prompt}[/bold red]")
-                    console.print("[bold yellow]Available commands: /models, /mcp, /dashboard, /switch [model_key], /help, /clear, /exit[/bold yellow]")
+                    console.print("[bold yellow]Available commands: /models, /mcp, /themes, /cls, /dashboard, /switch [model_key], /help, /clear, /exit[/bold yellow]")
                     continue
 
             if prompt.lower() == "exit":
                 # Display conversation history before exiting
-                console.print(Panel("[bold yellow]Conversation Summary[/bold yellow]", expand=False))
+                console.print(Panel("[bold #FFD700]Conversation Summary[/bold #FFD700]", expand=False, border_style="#FFD700"))
                 display_conversation_history(agent)
-                console.print("\n[bold green]👋 Thank you for using Codeius! Goodbye![/bold green]")
+
+                # Create a visually appealing goodbye message
+                goodbye_table = Table(box=HEAVY_HEAD, border_style="#7CFC00", expand=True)
+                goodbye_table.add_column("Message", style="#7CFC00", justify="center")
+                goodbye_table.add_row("[bold #7CFC00]Thank you for using Codeius AI Coding Agent![/bold #7CFC00]")
+                goodbye_table.add_row("[#00FFFF]We hope you enjoyed the experience[/#00FFFF]")
+                goodbye_table.add_row("[bold #BA55D3]Come back soon![/bold #BA55D3]")
+                console.print("\n", goodbye_table)
                 break
-            result = agent.ask(prompt)
+            # Show loading animation while waiting for agent response
+            import threading
+            stop_event = threading.Event()
+            loading_thread = threading.Thread(target=show_loading_animation, args=(stop_event,))
+            loading_thread.start()
+
+            try:
+                result = agent.ask(prompt)
+            finally:
+                stop_event.set()  # Stop the loading animation
+                loading_thread.join()  # Wait for the thread to finish
+                print()  # Add a newline after the loading message is cleared
+
             if result.startswith("**Agent Plan:**"):  # Looks like JSON action plan is parsed
                 if confirm_safe_execution(result):
-                    console.print("\n[bold green]✅ Action(s) executed successfully.[/bold green]\n")
+                    console.print("\n[bold #32CD32]✅ Success: Action(s) executed successfully.[/bold #32CD32]\n")
                 else:
-                    console.print("[bold red]❌ Action(s) cancelled.[/bold red]\n")
+                    console.print("[bold #FF4500]❌ Cancelled: Action(s) were not executed.[/bold #FF4500]\n")
             else:
-                # Enhanced agent response display 
+                # Enhanced agent response display with improved visual hierarchy
                 agent_panel = Panel(
-                    result, 
-                    title="[bold magenta]🤖 Codeius Agent[/bold magenta]", 
+                    result,
+                    title="[bold #BA55D3]🤖 Codeius Agent[/bold #BA55D3]",
                     expand=False,
-                    border_style="bright_magenta"
+                    border_style="#BA55D3",  # Medium purple border
+                    padding=(1, 1),
+                    highlight=True
                 )
                 console.print(agent_panel)
                 console.print()  # Add blank line for readability
@@ -807,11 +882,18 @@ def main():
                 if show_history in ("y", "yes", ""):
                     display_conversation_history(agent)
         except KeyboardInterrupt:
-            console.print("\n[bold yellow]⚠️  Ctrl+C detected – exiting safely...[/bold yellow]")
+            console.print("\n[bold #FF4500]⚠️  Ctrl+C detected – exiting safely...[/bold #FF4500]")
             # Display conversation history before exiting
-            console.print(Panel("[bold yellow]Conversation Summary[/bold yellow]", expand=False))
+            console.print(Panel("[bold #FFD700]Conversation Summary[/bold #FFD700]", expand=False, border_style="#FFD700"))
             display_conversation_history(agent)
-            console.print("\n[bold green]👋 Thank you for using Codeius! Goodbye![/bold green]")
+
+            # Create a visually appealing goodbye message
+            goodbye_table = Table(box=HEAVY_HEAD, border_style="#7CFC00", expand=True)
+            goodbye_table.add_column("Message", style="#7CFC00", justify="center")
+            goodbye_table.add_row("[bold #7CFC00]Thank you for using Codeius AI Coding Agent![/bold #7CFC00]")
+            goodbye_table.add_row("[#00FFFF]We hope you enjoyed the experience[/#00FFFF]")
+            goodbye_table.add_row("[bold #BA55D3]Come back soon![/bold #BA55D3]")
+            console.print("\n", goodbye_table)
             break
         except Exception as e:
             console.print(f"[bold red]❌ Error: {e}[/bold red]")

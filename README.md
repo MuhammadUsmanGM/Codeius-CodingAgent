@@ -1,5 +1,3 @@
-# README.md
-
 # Codeius AI Coding Agent
 
 Codeius is an AI-powered coding assistant that helps with various programming tasks through a command-line interface. It can read and write files, perform git operations, run tests, search code, execute shell commands, and conduct web searches to assist with coding tasks.
@@ -33,13 +31,39 @@ Codeius is an AI-powered coding assistant that helps with various programming ta
 
 ## Installation
 
+### Option 1: Using pip (Recommended)
+
+Install directly using pip:
+
+```bash
+pip install codeius
+```
+
+Then run:
+
+```bash
+codeius
+```
+
+### Option 2: Using uvx (Zero-Install)
+
+Run Codeius directly without installation using uvx:
+
+```bash
+uvx codeius
+```
+
+### Option 3: Development Installation
+
+If you want to contribute or modify the code:
+
 1. Clone the repository:
    ```bash
    git clone <repository-url>
    cd coding-agent
    ```
 
-2. Install dependencies:
+2. Install in development mode:
    ```bash
    pip install -e .
    # Additional dependencies for enhanced functionality:
@@ -65,38 +89,6 @@ Codeius is an AI-powered coding assistant that helps with various programming ta
    - `python config_manager_server.py` (port 10700)
    - `python task_scheduler_server.py` (port 10800)
 
-4. To add custom plugins:
-   - Create Python files in the `plugins/` directory
-   - Each file can contain multiple functions that will be auto-registered
-   - Use `/plugins` to see available plugins
-   - Use `/create_plugin [name]` to create a new plugin skeleton
-
-5. To use automation tools:
-   - Use `/scaffold [name] [template]` to generate project structures
-   - Use `/env [action] [variables]` to manage environment files
-   - Use `/rename [old] [new] [file]` to batch rename variables
-
-6. To use visualization tools:
-   - Use `/plot [metric_type]` to generate plots of code metrics, test coverage, or database results
-
-7. To use self-documenting tools:
-   - Use `/update_docs [type] [args]` to auto-update AUTHORS, CHANGELOG, README files
-
-8. To use package inspection tools:
-   - Use `/inspect [package_name]` to get detailed information about a package including dependencies, licenses, and vulnerabilities
-
-9. To use snippet tools:
-   - Use `/snippet [action] [args]` to manage code snippets with actions like 'get', 'add', 'list', and 'insert'
-
-10. To use web scraping tools:
-   - Use `/scrape [file_or_dir_or_url] [css_selector]` to scrape content from HTML files, directories, or URLs
-
-11. To use configuration management tools:
-   - Use `/config [action] [args]` to manage config files with actions like 'view', 'edit', and 'list'
-
-12. To use scheduling automation tools:
-   - Use `/schedule [task_type] [interval] [target]` to schedule tasks to run automatically (e.g., tests, scripts, commands)
-
 ## Configuration
 
 Create a `.env` file in your project root with the following environment variables:
@@ -113,24 +105,47 @@ GOOGLE_API_MODEL=gemini-1.5-flash  # Optional, defaults to gemini-1.5-flash
 Run the agent using:
 
 ```bash
-coding-agent
+codeius
 ```
 
 ### Available Commands
 
 - `/models` - List available AI models
 - `/mcp` - List available MCP servers
+- `/themes` - Show available visual themes
+- `/cls` or `/clear_screen` - Clear the screen and refresh the interface
 - `/dashboard` - Show real-time code quality dashboard
 - `/switch [model_key]` - Switch to a specific model
 - `/exit` - Exit the application
 - `/help` - Show help information
 - `/clear` - Clear the conversation history
+- And many more specialized tools for coding tasks
 
 ### Example Usage
 
 ```
 ⌨️ Enter your query: Write a Python function to calculate factorial
 🤖 Codeius Agent: [Response from the AI]
+```
+
+## Using with uvx
+
+For the easiest access without installation, use `uvx`:
+
+```bash
+# Run directly from PyPI without installing
+uvx codeius
+
+# Install and run with uvx
+uvx --with codeius codeius
+```
+
+uvx is a command-line tool that lets you run Python applications without installing them. It automatically creates a temporary environment, installs the app with its dependencies, runs it, and cleans up when you're done.
+
+To install uvx:
+
+```bash
+pip install uv
 ```
 
 ## Architecture
@@ -156,6 +171,10 @@ The agent follows a modular architecture:
   - `doc_search_server.py` - Documentation search
   - `db_server.py` - Database queries
 
+## Troubleshooting on Windows
+
+If you encounter issues on Windows related to terminal compatibility, try running Codeius from Command Prompt (cmd.exe) instead of PowerShell or other terminal emulators.
+
 ## Contributing
 
 1. Fork the repository
@@ -166,4 +185,5 @@ The agent follows a modular architecture:
 
 ## License
 
-[Specify your license here]
+MIT License - see the LICENSE file for details.
+</content>

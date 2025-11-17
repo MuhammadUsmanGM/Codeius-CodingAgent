@@ -170,7 +170,7 @@ class CodingAgent:
             end = reply.rfind("}") + 1
             if end == 0:  # No closing brace found
                 return reply, False
-                
+
             json_str = reply[start:end]
             out = json.loads(json_str)
             actions = out.get("actions", [])
