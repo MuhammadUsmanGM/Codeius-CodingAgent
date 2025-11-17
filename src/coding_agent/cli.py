@@ -1040,9 +1040,27 @@ def main():
                     display_conversation_history(agent)
                     console.print("\n[bold #32CD32]👋 Thank you for using Codeius! Goodbye![/bold #32CD32]")
                     break
+                elif prompt.lower().startswith('/create_project '):
+                    # Extract project details from the command
+                    parts = prompt.split(' ', 2)  # Split into at most 3 parts: '/create_project', 'type', 'name'
+                    if len(parts) >= 3:
+                        project_type = parts[1].strip().lower()
+                        project_name = parts[2].strip()
+
+                        # Import and execute the appropriate template function based on project type
+                        try:
+                            # Use the project_templates module to create the project
+                            from .project_templates import create_project
+                            create_project(project_type, project_name)
+                        except Exception as e:
+                            console.print(f"[bold red]Error creating project: {str(e)}[/bold red]")
+                    else:
+                        console.print("[bold red]Please specify both project type and name. Usage: /create_project [type] [name][/bold red]")
+                        console.print("[bold yellow]Available types: fastapi, flask, django, react, nodejs, ai_ml[/bold yellow]")
+                    continue
                 else:
                     console.print(f"[bold red]Unknown command: {prompt}[/bold red]")
-                    console.print("[bold yellow]Available commands: /models, /mcp, /themes, /cls, /dashboard, /switch [model_key], /help, /clear, /exit[/bold yellow]")
+                    console.print("[bold yellow]Available commands: /models, /mcp, /themes, /create_project, /cls, /dashboard, /switch [model_key], /help, /clear, /exit[/bold yellow]")
                     continue
 
             if prompt.lower() == "exit":
