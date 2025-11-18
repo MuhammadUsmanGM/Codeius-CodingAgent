@@ -751,7 +751,7 @@ def display_help():
     console.print()  # Add spacing
 
 def display_welcome_screen():
-    """Display an enhanced welcome screen with project info and instructions"""
+    """Display a cleaner welcome screen with project info and instructions"""
     # Display beautiful ASCII art for CODEIUS with improved font
     ascii_art = pyfiglet.figlet_format("CODEIUS", font="slant")
     console.print(f"[bold #8A2BE2]{ascii_art}[/bold #8A2BE2]")  # Deep purple color
@@ -778,58 +778,30 @@ def display_welcome_screen():
         console.print(api_warning)
         console.print()  # Extra spacing
 
-    # Create a welcome table with project information
-    welcome_table = Table(
+    # Create a cleaner welcome panel
+    welcome_panel = Panel(
+        "[bold #7CFC00]AI-powered coding assistant with multiple tools and visual interface[/bold #7CFC00]\n\n"
+        "[white]• Read/Write files • Git operations • Web search • Multi-LLM support[/white]\n"
+        "[white]• MCP servers for extended tools • Real-time dashboards[/white]\n\n"
+        "[#BA55D3]Commands:[/ #BA55D3] [bold #00FFFF]/help[/bold #00FFFF] for commands, [bold #00FFFF]/models[/bold #00FFFF] for LLMs, [bold #00FFFF]/mcp[/bold #00FFFF] for tools",
         title="[bold #9370DB on #00008B]Welcome to Codeius AI Coding Agent[/bold #9370DB on #00008B]",
-        title_style="bold #9370DB",
-        box=HEAVY_HEAD,
         border_style="#9370DB",
-        expand=True,
-        padding=(0, 1)
-    )
-
-    welcome_table.add_column("Feature", style="#7CFC00", no_wrap=True)  # Chartreuse green
-    welcome_table.add_column("Description", style="white")
-
-    welcome_table.add_row("File Operations", "Read and write source files in the workspace")
-    welcome_table.add_row("Git Operations", "Perform git operations (stage, commit)")
-    welcome_table.add_row("Web Search", "Perform real-time web searches via DuckDuckGo (no API key needed)")
-    welcome_table.add_row("AI Integration", "Powered by multiple LLM providers (Groq, Google)")
-    welcome_table.add_row("MCP Servers", "Access additional tools via MCP protocol (code search, shell, testing, docs, databases)")
-    welcome_table.add_row("Dashboard", "Real-time code quality, test coverage, and build metrics")
-
-    console.print(welcome_table)
-
-    # Create a visually appealing status panel
-    status_panel = Panel(
-        "[bold #00FFFF]Status:[/bold #00FFFF] [green]All systems operational[/green]\n"
-        "[bold #00FFFF]Version:[/bold #00FFFF] [magenta]1.0.0[/magenta]\n"
-        "[bold #00FFFF]Uptime:[/bold #00FFFF] [cyan]Ready for use[/cyan]\n",
-        title="[bold #40E0D0]System Status[/bold #40E0D0]",
-        border_style="#40E0D0",
+        padding=(1, 1),
         expand=False
     )
-    console.print(status_panel)
+    console.print(welcome_panel)
 
-    # Instructions panel with gradient-like effect
-    console.print("\n[bold #7CFC00]How to Use:[/bold #7CFC00]")
-    instructions_text = (
-        "- Type your coding instructions in the input field\n"
-        "- The agent will analyze your request and suggest actions\n"
-        "- You'll be prompted to confirm any file changes or git operations\n"
-        "- Type 'exit', 'quit', or 'bye' to exit the application\n"
-        "- Use commands starting with [bold #00FFFF]/[/bold #00FFFF] for special features\n"
-    )
-    console.print(Panel(
-        instructions_text,
-        title="[bold #40E0D0]Instructions[/bold #40E0D0]",
+    # Create a cleaner status panel
+    status_panel = Panel(
+        "[bold #00FFFF]Status:[/bold #00FFFF] [green]All systems operational[/green]  [bold #00FFFF]Version:[/bold #00FFFF] [magenta]1.0.0[/magenta]  [bold #00FFFF]Uptime:[/bold #00FFFF] [cyan]Ready for use[/cyan]\n\n"
+        "[bold #7CFC00]How to use:[/bold #7CFC00] Type coding instructions, confirm file operations, [bold]exit[/bold] to quit, or use [bold #00FFFF]/commands[/bold #00FFFF]",
+        title="[bold #40E0D0]System Status[/bold #40E0D0]",
+        border_style="#40E0D0",
         expand=False,
-        border_style="#40E0D0"  # Turquoise
-    ))
-
-    # Add a decorative separator with gradient effect
-    console.print(Rule("[bold #BA55D3]Powered by Advanced AI and Cutting-Edge Technology[/bold #BA55D3]", style="#BA55D3", align="center"))
-    console.print()  # Extra spacing
+        padding=(1, 1)
+    )
+    console.print(status_panel)
+    console.print()  # Add spacing
 
 def show_loading_animation(stop_event):
     """Show a loading animation while waiting for agent response"""
@@ -1043,21 +1015,10 @@ class CustomCompleter(Completer):
                         yield Completion(cmd, start_position=-len(text))
 
 def main():
-    # Show startup animation using sys.stdout for direct output without Rich
-    import sys
-    for i in range(3):
-        sys.stdout.write(".")
-        sys.stdout.flush()
-        time.sleep(0.3)
-    sys.stdout.write("\n")
-    sys.stdout.flush()
-
     display_welcome_screen()
 
-    console.print(Panel("[bold #32CD32]Initialization complete![/bold #32CD32]\n[white]Ready to assist with your coding tasks.[/white]", border_style="#32CD32", expand=False))
-    time.sleep(0.5)  # Brief pause for visual effect
-
     agent = CodingAgent()
+    # Plugins already loaded during agent initialization, no need to load again
 
     # Track the current mode (interaction or shell) - using a mutable container to allow updates
     mode_container = {'interaction': True}

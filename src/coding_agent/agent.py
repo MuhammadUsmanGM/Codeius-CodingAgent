@@ -44,8 +44,8 @@ class CodingAgent:
         # Add providers attribute for compatibility with existing code
         self.providers = self.model_manager.providers
 
-        # Log initialization
-        agent_logger.app_logger.info("CodingAgent initialized successfully")
+        # Log initialization to file only, not to console
+        # agent_logger.app_logger.info("CodingAgent initialized successfully")
 
     def get_current_model_info(self) -> Optional[Dict[str, Any]]:
         """Get information about the currently active provider/model"""
