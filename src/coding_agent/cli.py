@@ -7,6 +7,15 @@ from threading import Thread
 from typing import Generator
 from coding_agent.agent import CodingAgent
 from coding_agent.dashboard import Dashboard
+from coding_agent.context_manager import ContextManager
+from coding_agent.context_cli import (
+    display_context_summary,
+    semantic_search_command,
+    show_file_context,
+    set_project_command,
+    find_element_command,
+    auto_detect_project_command
+)
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.text import Text
@@ -566,6 +575,13 @@ def display_help():
         ("/config [action] [args]", "Manage configurations"),
         ("/schedule [task_type] [interval] [target]", "Schedule tasks to run automatically"),
         ("/inspect [package]", "Inspect package information"),
+        ("/context", "Show current project context information"),
+        ("/set_project [path] [name]", "Set the current project context"),
+        ("/search [query]", "Semantic search across the codebase"),
+        ("/find_function [name]", "Find a function by name"),
+        ("/find_class [name]", "Find a class by name"),
+        ("/file_context [file_path]", "Show context for a specific file"),
+        ("/autodetect", "Auto-detect and set project context"),
         ("/plugins", "List available plugins"),
         ("/create_plugin [name]", "Create a new plugin skeleton"),
         ("/switch [model_key]", "Switch to a specific model"),
@@ -635,6 +651,9 @@ def display_help():
     tips_table.add_row("Use [bold #00FFFF]/shell [command][/bold #00FFFF] to execute secure shell commands")
     tips_table.add_row("Use [bold #00FFFF]/toggle[/bold #00FFFF] to switch between Interaction and Shell modes")
     tips_table.add_row("Use [bold #00FFFF]/mode[/bold #00FFFF] as an alternative to /toggle command")
+    tips_table.add_row("Use [bold #00FFFF]/context[/bold #00FFFF] to see project context information")
+    tips_table.add_row("Use [bold #00FFFF]/search [query][/bold #00FFFF] for semantic code search")
+    tips_table.add_row("Use [bold #00FFFF]/autodetect[/bold #00FFFF] to automatically set project context")
     tips_table.add_row("Type [bold #00FFFF]exit[/bold #00FFFF] to quit anytime")
     tips_table.add_row("Use [bold #00FFFF]/clear[/bold #00FFFF] to reset conversation history")
 
@@ -928,7 +947,7 @@ class CustomCompleter(Completer):
                 pass
             else:
                 # Provide command suggestions for commands that don't require parameters
-                commands = ['/models', '/mcp', '/dashboard', '/add_model', '/shell', '/toggle', '/mode', '/keys', '/shortcuts', '/ocr', '/refactor', '/diff', '/plugins', '/create_plugin', '/scaffold', '/env', '/rename', '/plot', '/update_docs', '/inspect', '/snippet', '/scrape', '/config', '/schedule', '/switch', '/help', '/clear', '/exit']
+                commands = ['/models', '/mcp', '/dashboard', '/add_model', '/shell', '/toggle', '/mode', '/keys', '/shortcuts', '/context', '/ctx', '/set_project', '/search', '/find_function', '/find_class', '/file_context', '/autodetect', '/detect', '/ocr', '/refactor', '/diff', '/plugins', '/create_plugin', '/scaffold', '/env', '/rename', '/plot', '/update_docs', '/inspect', '/snippet', '/scrape', '/config', '/schedule', '/switch', '/help', '/clear', '/exit']
                 for cmd in commands:
                     if cmd.startswith(text.lower()):
                         yield Completion(cmd, start_position=-len(text))
@@ -1155,6 +1174,53 @@ def main():
                         console.print("[bold green]Mode: Interaction Mode - AI Agent Ready[/bold green]")
                     else:
                         console.print("[bold yellow]Mode: Shell Mode - Direct Command Execution[/bold yellow]")
+                    continue
+                elif prompt.lower() == '/context' or prompt.lower() == '/ctx':
+                    display_context_summary(agent.context_manager)
+                    continue
+                elif prompt.lower() == '/set_project' or prompt.lower().startswith('/set_project '):
+                    parts = prompt.split(' ', 2)  # Split into at most 3 parts: command, path, optional name
+                    if len(parts) >= 2:
+                        project_path = parts[1].strip()
+                        project_name = parts[2].strip() if len(parts) > 2 else None
+                        set_project_command(agent.context_manager, project_path, project_name)
+                    else:
+                        console.print("[bold red]Please specify a project path. Usage: /set_project [path] [optional_name][/bold red]")
+                    continue
+                elif prompt.lower().startswith('/search '):
+                    parts = prompt.split(' ', 1)
+                    if len(parts) > 1:
+                        query = parts[1].strip()
+                        semantic_search_command(agent.context_manager, query)
+                    else:
+                        console.print("[bold red]Please specify a search query. Usage: /search [query][/bold red]")
+                    continue
+                elif prompt.lower().startswith('/find_function '):
+                    parts = prompt.split(' ', 1)
+                    if len(parts) > 1:
+                        func_name = parts[1].strip()
+                        find_element_command(agent.context_manager, 'function', func_name)
+                    else:
+                        console.print("[bold red]Please specify a function name. Usage: /find_function [function_name][/bold red]")
+                    continue
+                elif prompt.lower().startswith('/find_class '):
+                    parts = prompt.split(' ', 1)
+                    if len(parts) > 1:
+                        class_name = parts[1].strip()
+                        find_element_command(agent.context_manager, 'class', class_name)
+                    else:
+                        console.print("[bold red]Please specify a class name. Usage: /find_class [class_name][/bold red]")
+                    continue
+                elif prompt.lower() == '/autodetect' or prompt.lower() == '/detect':
+                    auto_detect_project_command(agent.context_manager)
+                    continue
+                elif prompt.lower().startswith('/file_context '):
+                    parts = prompt.split(' ', 1)
+                    if len(parts) > 1:
+                        file_path = parts[1].strip()
+                        show_file_context(agent.context_manager, file_path)
+                    else:
+                        console.print("[bold red]Please specify a file path. Usage: /file_context [file_path][/bold red]")
                     continue
                 elif prompt.lower().startswith('/switch '):
                     parts = prompt.split(' ', 1)

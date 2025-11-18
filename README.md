@@ -46,6 +46,7 @@ Codeius is an advanced AI-powered coding assistant that helps with various progr
 - **Rich CLI Interface**: Beautiful, user-friendly command-line interface with stunning visuals
 - **Code Search & Navigation**: Find functions, classes, and TODOs in your project
 - **Secure Shell Commands**: Execute safe shell commands directly with `/shell` command
+- **Context Management**: Advanced project context tracking with semantic code search and cross-reference features
 - **Keyboard Shortcuts**: Enhanced navigation with special key combinations
 - **Automated Testing**: Run pytest tests directly from the agent
 - **Documentation Search**: Find information in local documentation files
@@ -165,6 +166,13 @@ codeius
 - `/shell [command]` - Execute a direct shell command securely
 - `/toggle` - Toggle between Interaction and Shell modes
 - `/mode` - Alternative command to toggle between modes
+- `/context` - Show current project context information
+- `/set_project [path] [name]` - Set the current project context
+- `/search [query]` - Semantic search across the codebase
+- `/find_function [name]` - Find a function by name
+- `/find_class [name]` - Find a class by name
+- `/file_context [file_path]` - Show context for a specific file
+- `/autodetect` - Auto-detect and set project context
 - `/keys` or `/shortcuts` - Show mode switching options
 - `/themes` - Show available visual themes
 - `/cls` or `/clear_screen` - Clear the screen and refresh the interface
