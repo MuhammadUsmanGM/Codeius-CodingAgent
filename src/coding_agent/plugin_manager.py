@@ -58,11 +58,13 @@ class PluginManager:
                 if plugin:
                     self.loaded_plugins[plugin_name] = plugin
                     plugins_loaded += 1
-                    print(f"Loaded plugin: {plugin_name}")
+                    # print(f"Loaded plugin: {plugin_name}")  # Keep interface clean
             except Exception as e:
-                print(f"Failed to load plugin {plugin_name}: {e}")
+                # print(f"Failed to load plugin {plugin_name}: {e}")  # Keep interface clean
+                pass  # Silently handle plugin load errors to keep interface clean
         
-        print(f"Total plugins loaded: {plugins_loaded}")
+        if plugins_loaded > 0 or True:  # Always show even if 0 for consistency
+            print(f"Total plugins loaded: {plugins_loaded}")
     
     def _load_plugin(self, plugin_path: str):
         """Load a single plugin from the given path"""
