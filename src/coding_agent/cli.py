@@ -536,7 +536,7 @@ def create_plugin(agent, name):
             name=name,
             description=f"Custom plugin for {name}",
             author="User",
-            version="1.0.4"
+            version="1.0.45"
         )
         console.print(f"[bold green]Plugin '{name}' created successfully![/bold green]")
         console.print(f"Location: {plugin_path}")
@@ -844,7 +844,7 @@ def display_welcome_screen():
 
     # Create a cleaner status panel
     status_panel = Panel(
-        "[bold #00FFFF]Status:[/bold #00FFFF] [green]All systems operational[/green]  [bold #00FFFF]Version:[/bold #00FFFF] [magenta]1.0.4[/magenta]  [bold #00FFFF]Uptime:[/bold #00FFFF] [cyan]Ready for use[/cyan]\n\n"
+        "[bold #00FFFF]Status:[/bold #00FFFF] [green]All systems operational[/green]  [bold #00FFFF]Version:[/bold #00FFFF] [magenta]1.0.45[/magenta]  [bold #00FFFF]Uptime:[/bold #00FFFF] [cyan]Ready for use[/cyan]\n\n"
         "[bold #7CFC00]How to use:[/bold #7CFC00] Type coding instructions, confirm file operations, [bold]exit[/bold] to quit, or use [bold #00FFFF]/commands[/bold #00FFFF]",
         title="[bold #40E0D0]System Status[/bold #40E0D0]",
         border_style="#40E0D0",
@@ -1066,6 +1066,9 @@ class CustomCompleter(Completer):
                         yield Completion(cmd, start_position=-len(text))
 
 def main():
+    # Initialize variable to track Ctrl+C presses
+    first_ctrl_c_time = None
+
     display_welcome_screen()
 
     agent = CodingAgent()
@@ -1527,26 +1530,402 @@ def main():
                 if show_history in ("y", "yes", ""):
                     display_conversation_history(agent)
         except KeyboardInterrupt:
-            console.print("\n[bold #FF4500]Ctrl+C detected – exiting safely...[/bold #FF4500]")
-            # Display conversation history before exiting
-            console.print(Panel("[bold #FFD700]Conversation Summary[/bold #FFD700]", expand=False, border_style="#FFD700"))
-            display_conversation_history(agent)
+            import time
+            current_time = time.time()
 
-            # Create a visually appealing goodbye message
-            goodbye_table = Table(
-                title="[bold #FFD700]Thank You![/bold #FFD700]",
-                box=HEAVY_HEAD,
-                border_style="#7CFC00",
-                expand=True,
-                title_style="bold #FFD700 on #00008B"
+            # Check if the first Ctrl+C happened less than 2 seconds ago
+            if first_ctrl_c_time is not None and (current_time - first_ctrl_c_time) < 2.0:
+                # Second Ctrl+C detected - exit now
+                console.print("\n[bold #FF4500]Double Ctrl+C detected – exiting immediately...[/bold #FF4500]")
+                # Display conversation history before exiting
+                console.print(Panel("[bold #FFD700]Conversation Summary[/bold #FFD700]", expand=False, border_style="#FFD700"))
+                display_conversation_history(agent)
+
+                # Create a visually appealing goodbye message
+                goodbye_table = Table(
+                    title="[bold #FFD700]Thank You![/bold #FFD700]",
+                    box=HEAVY_HEAD,
+                    border_style="#7CFC00",
+                    expand=True,
+                    title_style="bold #FFD700 on #00008B"
+                )
+                goodbye_table.add_column("Message", style="#7CFC00", justify="center")
+                goodbye_table.add_row("[bold #7CFC00]Thank you for using Codeius AI Coding Agent![/bold #7CFC00]")
+                goodbye_table.add_row("[#00FFFF]We hope you enjoyed the experience[/#00FFFF]")
+                goodbye_table.add_row("[bold #BA55D3]Come back soon![/bold #BA55D3]")
+                console.print("\n", goodbye_table)
+                time.sleep(1)  # Brief pause to enjoy the goodbye message
+                break
+            else:
+                # First Ctrl+C - set the timer and warn the user
+                first_ctrl_c_time = current_time
+                console.print("\n[bold yellow]Ctrl+C detected – press again within 2 seconds to exit[/bold yellow]")
+                # Continue the loop without breaking
+                continue
+        except Exception as e:
+            console.print(f"[bold red][BAD] Error: {e}[/bold red]")
+
+# Global variable to track Ctrl+C presses
+first_ctrl_c_time = None
+
+def main():
+    global first_ctrl_c_time  # Use the global variable to track Ctrl+C presses
+    display_welcome_screen()
+
+    agent = CodingAgent()
+    # Plugins already loaded during agent initialization, no need to load again
+
+    # Track the current mode (interaction or shell) - using a mutable container to allow updates
+    mode_container = {'interaction': True}
+
+    # Create a custom completer that handles both commands and model suggestions
+    completer = CustomCompleter(agent)
+
+    while True:
+        try:
+            # Create a prompt session with enhanced styling and custom completion based on current mode
+            def get_current_style():
+                if mode_container['interaction']:
+                    # Standard interaction mode style
+                    return Style.from_dict({
+                        'prompt': 'bold #00FFFF',
+                        'completion-menu': 'bg:#262626 #ffffff',
+                        'completion-menu.completion.current': 'bg:#4a4a4a #ffffff',
+                        'completion-menu.meta.completion': 'bg:#262626 #ffffff',
+                        'completion-menu.meta.completion.current': 'bg:#4a4a4a #ffffff',
+                    })
+                else:
+                    # Shell mode style - different colors
+                    return Style.from_dict({
+                        'prompt': 'bold #FF4500',  # Orange color for shell mode
+                        'completion-menu': 'bg:#4a4a4a #ffffff',
+                        'completion-menu.completion.current': 'bg:#262626 #ffffff',
+                        'completion-menu.meta.completion': 'bg:#4a4a4a #ffffff',
+                        'completion-menu.meta.completion.current': 'bg:#262626 #ffffff',
+                    })
+
+            def get_current_prompt_text():
+                if mode_container['interaction']:
+                    return HTML('<style fg="#00FFFF" bg="black"><b>⌨️ Enter your query:</b> </style> ')
+                else:
+                    return HTML('<style fg="#FF4500" bg="black"><b>🐚 Shell Mode:</b> </style> ')
+
+            # Create session with updated style
+            session = PromptSession(
+                completer=completer,
+                style=get_current_style(),
+                complete_while_typing=True,
             )
-            goodbye_table.add_column("Message", style="#7CFC00", justify="center")
-            goodbye_table.add_row("[bold #7CFC00]Thank you for using Codeius AI Coding Agent![/bold #7CFC00]")
-            goodbye_table.add_row("[#00FFFF]We hope you enjoyed the experience[/#00FFFF]")
-            goodbye_table.add_row("[bold #BA55D3]Come back soon![/bold #BA55D3]")
-            console.print("\n", goodbye_table)
-            time.sleep(1)  # Brief pause to enjoy the goodbye message
-            break
+
+            # Styled prompt with enhanced visual indicator and auto-completion
+            prompt = session.prompt(
+                get_current_prompt_text(),
+                default='',
+                complete_style=CompleteStyle.MULTI_COLUMN,
+                style=get_current_style()
+            ).strip()
+
+            if not prompt: continue
+
+            # Handle special commands
+            if prompt.startswith('/'):
+                if prompt.lower() == '/models':
+                    display_models(agent)
+                    continue
+                elif prompt.lower() == '/mcp':
+                    display_mcp_tools(agent)
+                    continue
+                elif prompt.lower() == '/dashboard':
+                    display_dashboard()
+                    continue
+                elif prompt.lower() == '/themes':
+                    display_themes()
+                    continue
+                elif prompt.lower().startswith('/ocr '):
+                    # Extract image path from the command
+                    parts = prompt.split(' ', 1)
+                    if len(parts) > 1:
+                        image_path = parts[1].strip()
+                        ocr_image(agent, image_path)
+                    else:
+                        console.print("[bold red]Please specify an image path. Usage: /ocr [image_path][/bold red]")
+                    continue
+                elif prompt.lower().startswith('/refactor '):
+                    # Extract file path from the command
+                    parts = prompt.split(' ', 1)
+                    if len(parts) > 1:
+                        file_path = parts[1].strip()
+                        refactor_code(agent, file_path)
+                    else:
+                        console.print("[bold red]Please specify a file path. Usage: /refactor [file_path][/bold red]")
+                    continue
+                elif prompt.lower().startswith('/diff '):
+                    # Extract file paths from the command
+                    parts = prompt.split(' ', 2)  # Split into at most 3 parts: '/diff', 'file1', 'file2'
+                    if len(parts) == 3:
+                        file1, file2 = parts[1].strip(), parts[2].strip()
+                        diff_files(agent, file1, file2)
+                    else:
+                        console.print("[bold red]Please specify two file paths. Usage: /diff [file1] [file2][/bold red]")
+                    continue
+                elif prompt.lower() == '/plugins':
+                    show_plugins(agent)
+                    continue
+                elif prompt.lower().startswith('/create_plugin '):
+                    parts = prompt.split(' ', 1)
+                    if len(parts) > 1:
+                        plugin_name = parts[1].strip()
+                        create_plugin(agent, plugin_name)
+                    else:
+                        console.print("[bold red]Please specify a plugin name. Usage: /create_plugin [name][/bold red]")
+                    continue
+                elif prompt.lower().startswith('/scaffold '):
+                    parts = prompt.split(' ')
+                    args = [part.strip() for part in parts[1:] if part.strip()]
+                    automation_task(agent, 'scaffold', *args)
+                    continue
+                elif prompt.lower() == '/shell':
+                    console.print("[bold red]Please specify a command to execute. Usage: /shell [command][/bold red]")
+                    continue
+                elif prompt.lower().startswith('/shell '):
+                    parts = prompt.split(' ', 1)  # Split into at most 2 parts: '/shell' and 'command'
+                    if len(parts) > 1:
+                        command = parts[1].strip()
+                        execute_shell_command_safe(command)
+                    else:
+                        console.print("[bold red]Please specify a command to execute. Usage: /shell [command][/bold red]")
+                    continue
+                elif prompt.lower().startswith('/env '):
+                    parts = prompt.split(' ')
+                    args = [part.strip() for part in parts[1:] if part.strip()]
+                    automation_task(agent, 'env', *args)
+                    continue
+                elif prompt.lower().startswith('/rename '):
+                    parts = prompt.split(' ')
+                    args = [part.strip() for part in parts[1:] if part.strip()]
+                    automation_task(agent, 'rename', *args)
+                    continue
+                elif prompt.lower().startswith('/plot '):
+                    parts = prompt.split(' ', 1)
+                    if len(parts) > 1:
+                        metric_type = parts[1].strip()
+                        visualization_task(agent, metric_type)
+                    else:
+                        console.print("[bold red]Please specify a metric type. Usage: /plot [metric_type][/bold red]")
+                    continue
+                elif prompt.lower().startswith('/update_docs '):
+                    parts = prompt.split(' ', 2)
+                    if len(parts) > 1:
+                        doc_type = parts[1].strip()
+                        doc_args = parts[2].split(' ') if len(parts) > 2 else []
+                        self_document_task(agent, doc_type, *doc_args)
+                    else:
+                        console.print("[bold red]Please specify a documentation type. Usage: /update_docs [type] [args][/bold red]")
+                    continue
+                elif prompt.lower().startswith('/inspect '):
+                    parts = prompt.split(' ', 1)
+                    if len(parts) > 1:
+                        package_name = parts[1].strip()
+                        package_inspect_task(agent, package_name)
+                    else:
+                        console.print("[bold red]Please specify a package name. Usage: /inspect [package_name][/bold red]")
+                    continue
+                elif prompt.lower().startswith('/snippet '):
+                    parts = prompt.split(' ', 2)
+                    if len(parts) > 1:
+                        action = parts[1].strip()
+                        snippet_args = parts[2].split(' ') if len(parts) > 2 else []
+                        snippet_task(agent, action, *snippet_args)
+                    else:
+                        console.print("[bold red]Please specify an action. Usage: /snippet [action] [args][/bold red]")
+                        console.print("[bold]Available actions: get, add, list, insert[/bold]")
+                    continue
+                elif prompt.lower().startswith('/scrape '):
+                    parts = prompt.split(' ', 1)
+                    if len(parts) > 1:
+                        url = parts[1].strip()
+                        web_scrape_task(agent, url)
+                    else:
+                        console.print("[bold red]Please specify a URL. Usage: /scrape [url][/bold red]")
+                    continue
+                elif prompt.lower().startswith('/config '):
+                    parts = prompt.split(' ', 2)
+                    if len(parts) > 1:
+                        action = parts[1].strip()
+                        config_args = parts[2].split(' ') if len(parts) > 2 else []
+                        config_task(agent, action, *config_args)
+                    else:
+                        console.print("[bold red]Please specify an action. Usage: /config [action] [args][/bold red]")
+                        console.print("[bold]Available actions: get, set, list, edit[/bold]")
+                    continue
+                elif prompt.lower().startswith('/schedule '):
+                    parts = prompt.split(' ', 2)
+                    if len(parts) > 1:
+                        action = parts[1].strip()
+                        schedule_args = parts[2].split(' ') if len(parts) > 2 else []
+                        schedule_task(agent, action, *schedule_args)
+                    else:
+                        console.print("[bold red]Please specify an action. Usage: /schedule [action] [args][/bold red]")
+                        console.print("[bold]Available actions: add, list, remove, run[/bold]")
+                    continue
+                elif prompt.lower().startswith('/analyze '):
+                    analyze_project_command()
+                    continue
+                elif prompt.lower() in ['/switch', '/switch '] and len(prompt.split()) == 1:
+                    # If just /switch without arguments, ask for model interactively
+                    available_models = agent.get_available_models()
+                    if available_models:
+                        console.print("\n[bold]Available Models:[/bold]")
+                        for key, model_info in available_models.items():
+                            console.print(f"  [cyan]{key}[/cyan] - {model_info.get('name', 'Unknown')}")
+                        model_key = Prompt.ask("\n[bold yellow]Enter model key to switch to[/bold yellow]").strip()
+                        if model_key:
+                            result = agent.switch_model(model_key)
+                            console.print(f"[bold green]{result}[/bold green]")
+                        else:
+                            console.print("[bold red]No model key provided[/bold red]")
+                    else:
+                        console.print("[bold red]No models available to switch to[/bold red]")
+                    continue
+                elif prompt.lower().startswith('/switch '):
+                    # Extract model key from the command
+                    parts = prompt.split(' ', 1)
+                    if len(parts) > 1:
+                        model_key = parts[1].strip()
+                        result = agent.switch_model(model_key)
+                        console.print(f"[bold green]{result}[/bold green]")
+                    else:
+                        console.print("[bold red]Please specify a model key. Usage: /switch [model_key][/bold red]")
+                    continue
+                elif prompt.lower() == '/help':
+                    display_help()
+                    continue
+                elif prompt.lower() == '/clear':
+                    agent.reset_history()
+                    console.print("[bold green]Conversation history cleared[/bold green]")
+                    continue
+                elif prompt.lower() == '/exit':
+                    # Allow user to exit using /exit command
+                    # Display conversation history before exiting
+                    history_check = getattr(agent, 'history', [])
+                    if hasattr(agent, 'conversation_manager') and hasattr(agent.conversation_manager, 'history'):
+                        history_check = agent.conversation_manager.history
+
+                    if len(history_check) > 0 and len([h for h in history_check if h["role"] == "user"]) % 3 == 0:
+                        show_history = Prompt.ask("\n[bold yellow]Show conversation history?[/bold yellow] [Y/n]", default="Y").strip().lower()
+                        if show_history in ("y", "yes", ""):
+                            display_conversation_history(agent)
+
+                    # Create a visually appealing goodbye message
+                    goodbye_table = Table(
+                        title="[bold #FFD700]Thank You![/bold #FFD700]",
+                        box=HEAVY_HEAD,
+                        border_style="#7CFC00",
+                        expand=True,
+                        title_style="bold #FFD700 on #00008B"
+                    )
+                    goodbye_table.add_column("Message", style="#7CFC00", justify="center")
+                    goodbye_table.add_row("[bold #7CFC00]Thank you for using Codeius AI Coding Agent![/bold #7CFC00]")
+                    goodbye_table.add_row("[#00FFFF]We hope you enjoyed the experience[/#00FFFF]")
+                    goodbye_table.add_row("[bold #BA55D3]Come back soon![/bold #BA55D3]")
+                    console.print("\n", goodbye_table)
+                    time.sleep(1)  # Brief pause to enjoy the goodbye message
+                    break
+                elif prompt.lower() == '/add_model':
+                    # Interactive model setup
+                    console.print("\n[bold #40E0D0]Add Custom Model Setup[/bold #40E0D0]")
+                    model_name = Prompt.ask("[bold yellow]Enter a name for the model[/bold yellow]").strip()
+                    if not model_name:
+                        console.print("[bold red]Model name is required[/bold red]")
+                        continue
+
+                    api_key = Prompt.ask("[bold yellow]Enter API key[/bold yellow]", password=True).strip()
+                    if not api_key:
+                        console.print("[bold red]API key is required[/bold red]")
+                        continue
+
+                    base_url = Prompt.ask("[bold yellow]Enter base URL (e.g., https://api.openai.com/v1)[/bold yellow]").strip()
+                    if not base_url:
+                        console.print("[bold red]Base URL is required[/bold red]")
+                        continue
+
+                    model_id = Prompt.ask("[bold yellow]Enter model ID (e.g., gpt-4, claude-3-opus)[/bold yellow]").strip()
+                    if not model_id:
+                        console.print("[bold red]Model ID is required[/bold red]")
+                        continue
+
+                    # Add the custom model
+                    success = agent.add_custom_model(model_name, api_key, base_url, model_id)
+                    if success:
+                        console.print(f"[bold green]Successfully added {model_name}![/bold green]")
+                        console.print(f"[bold]Use /switch {model_name} to use this model[/bold]")
+                    else:
+                        console.print(f"[bold red]Failed to add {model_name}[/bold red]")
+                    continue
+            elif prompt.lower() in ['exit', 'quit', 'q']:
+                # If user types just "exit", "quit", or "q", also show history before exiting
+                # Display conversation history before exiting
+                history_check = getattr(agent, 'history', [])
+                if hasattr(agent, 'conversation_manager') and hasattr(agent.conversation_manager, 'history'):
+                    history_check = agent.conversation_manager.history
+
+                if len(history_check) > 0 and len([h for h in history_check if h["role"] == "user"]) % 3 == 0:
+                    show_history = Prompt.ask("\n[bold yellow]Show conversation history?[/bold yellow] [Y/n]", default="Y").strip().lower()
+                    if show_history in ("y", "yes", ""):
+                        display_conversation_history(agent)
+
+                # Create a visually appealing goodbye message
+                goodbye_table = Table(
+                    title="[bold #FFD700]Thank You![/bold #FFD700]",
+                    box=HEAVY_HEAD,
+                    border_style="#7CFC00",
+                    expand=True,
+                    title_style="bold #FFD700 on #00008B"
+                )
+                goodbye_table.add_column("Message", style="#7CFC00", justify="center")
+                goodbye_table.add_row("[bold #7CFC00]Thank you for using Codeius AI Coding Agent![/bold #7CFC00]")
+                goodbye_table.add_row("[#00FFFF]We hope you enjoyed the experience[/#00FFFF]")
+                goodbye_table.add_row("[bold #BA55D3]Come back soon![/bold #BA55D3]")
+                console.print("\n", goodbye_table)
+                time.sleep(1)  # Brief pause to enjoy the goodbye message
+                break
+            else:
+                # Process the prompt with the agent
+                result = agent.ask(prompt)
+                console.print(Panel(result, title="[bold #BA55D3]Codeius Agent Response[/bold #BA55D3]", border_style="#BA55D3", expand=False))
+        except KeyboardInterrupt:
+            import time
+            current_time = time.time()
+
+            # Check if the first Ctrl+C happened less than 2 seconds ago
+            if first_ctrl_c_time is not None and (current_time - first_ctrl_c_time) < 2.0:
+                # Second Ctrl+C detected - exit now
+                console.print("\n[bold #FF4500]Double Ctrl+C detected – exiting immediately...[/bold #FF4500]")
+                # Display conversation history before exiting
+                console.print(Panel("[bold #FFD700]Conversation Summary[/bold #FFD700]", expand=False, border_style="#FFD700"))
+                display_conversation_history(agent)
+
+                # Create a visually appealing goodbye message
+                goodbye_table = Table(
+                    title="[bold #FFD700]Thank You![/bold #FFD700]",
+                    box=HEAVY_HEAD,
+                    border_style="#7CFC00",
+                    expand=True,
+                    title_style="bold #FFD700 on #00008B"
+                )
+                goodbye_table.add_column("Message", style="#7CFC00", justify="center")
+                goodbye_table.add_row("[bold #7CFC00]Thank you for using Codeius AI Coding Agent![/bold #7CFC00]")
+                goodbye_table.add_row("[#00FFFF]We hope you enjoyed the experience[/#00FFFF]")
+                goodbye_table.add_row("[bold #BA55D3]Come back soon![/bold #BA55D3]")
+                console.print("\n", goodbye_table)
+                time.sleep(1)  # Brief pause to enjoy the goodbye message
+                break
+            else:
+                # First Ctrl+C - set the timer and warn the user
+                first_ctrl_c_time = current_time
+                console.print("\n[bold yellow]Ctrl+C detected – press again within 2 seconds to exit[/bold yellow]")
+                # Continue the loop without breaking
+                continue
         except Exception as e:
             console.print(f"[bold red][BAD] Error: {e}[/bold red]")
 
