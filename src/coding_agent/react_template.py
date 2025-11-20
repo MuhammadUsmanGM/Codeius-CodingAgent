@@ -484,7 +484,7 @@ export default useApi;
     with open(project_path / "package.json", "w") as f:
         f.write(f'''{{
   "name": "{project_name.lower().replace(' ', '-')}",
-  "version": "1.0.4",
+  "version": "1.0.45",
   "private": true,
   "dependencies": {{
     "react": "^18.2.0",
