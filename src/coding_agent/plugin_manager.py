@@ -101,7 +101,7 @@ class PluginManager:
             result[plugin_name] = list(plugin.keys())
         return result
     
-    def create_plugin_skeleton(self, name: str, description: str = "", author: str = "", version: str = "1.0.45"):
+    def create_plugin_skeleton(self, name: str, description: str = "", author: str = "", version: str = "1.0.50"):
         """Create a skeleton for a new plugin"""
         plugin_content = f'''"""
 {name} Plugin

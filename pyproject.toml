@@ -1,6 +1,6 @@
 [project]
 name = "codeius"
-version = "1.0.45"
+version = "1.0.50"
 description = "AI-powered coding assistant with multiple tools and visual interface"
 readme = "README.md"
 license = { text = "MIT" }
