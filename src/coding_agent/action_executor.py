@@ -8,16 +8,19 @@ from coding_agent.git_ops import GitOps
 from coding_agent.config import config_manager
 from coding_agent.logger import agent_logger
 from coding_agent.action_handlers import ACTION_HANDLERS, ActionHandler
+from coding_agent.performance import PerformanceMonitor
 import json
+import time
 
 
 class ActionExecutor:
     """Handles execution of actions requested by the AI."""
     
-    def __init__(self):
+    def __init__(self, perf_monitor: PerformanceMonitor):
         self.file_ops = FileOps()
         self.git_ops = GitOps()
         self.config = config_manager.get_agent_config()
+        self.perf_monitor = perf_monitor
         
     def execute_actions(self, reply: str, search_provider=None) -> Tuple[str, bool]:
         """Parse JSON from LLM reply and execute actions."""
@@ -42,7 +45,15 @@ class ActionExecutor:
                 handler_class = ACTION_HANDLERS.get(action_type)
                 if handler_class:
                     handler = handler_class(self.file_ops, self.git_ops)
-                    result, success = handler.handle(action, search_provider)
+                    
+                    start_time = time.time()
+                    success = False
+                    try:
+                        result, success = handler.handle(action, search_provider)
+                    finally:
+                        duration = time.time() - start_time
+                        self.perf_monitor.record_operation(f"action_{action_type}", duration, success)
+
                     results.append(result)
                 else:
                     result = f"❌ Unknown action type: {action_type}"

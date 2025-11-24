@@ -14,9 +14,11 @@ from coding_agent.custom_model_manager import custom_model_manager
 from coding_agent.context_manager import ContextManager
 from coding_agent.security_manager import SecurityScanner, security_scanner, security_policy_manager
 from coding_agent.visualization_manager import VisualizationManager
+from coding_agent.performance import perf_monitor
 from dotenv import load_dotenv
 import time
 import os
+import pathlib
 load_dotenv()
 
 class CodingAgent:
@@ -47,7 +49,7 @@ class CodingAgent:
         # Initialize core services
         self.model_manager = ModelManager()
         self.conversation_manager = ConversationManager()
-        self.action_executor = ActionExecutor()
+        self.action_executor = ActionExecutor(perf_monitor)
         self.plugin_manager = plugin_manager
         self.context_manager = ContextManager()
         self.security_scanner = security_scanner
@@ -126,10 +128,16 @@ class CodingAgent:
         # Read additional agent instructions from AGENT.md
         agent_instructions = ""
         try:
-            agent_md_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "AGENT.md")
-            if os.path.exists(agent_md_path):
+            # Correctly resolve the path to AGENT.md in the project root
+            current_file_path = pathlib.Path(__file__).resolve()
+            project_root = current_file_path.parent.parent.parent  # Go up to project root directory
+            agent_md_path = project_root / "AGENT.md"
+            if agent_md_path.exists():
                 with open(agent_md_path, 'r', encoding='utf-8') as f:
                     agent_instructions = f.read()
+            else:
+                # Fallback if AGENT.md is not found
+                agent_instructions = "You are an advanced AI coding agent."
         except Exception as e:
             # If reading the file fails, continue with just the base instructions
             agent_logger.app_logger.warning(f"Failed to read AGENT.md: {e}")
@@ -184,8 +192,15 @@ class CodingAgent:
 
         # Get LLM response with timing
         start_time = time.time()
-        reply = self.model_manager.chat(messages, max_tokens)
+        try:
+            reply = self.model_manager.chat(messages, max_tokens)
+            success = True
+        except Exception as e:
+            reply = f"Error communicating with LLM: {e}"
+            success = False
         duration = time.time() - start_time
+        perf_monitor.record_operation("llm_chat", duration, success)
+
 
         # Try to parse/action JSON; else conversational reply
         result, performed = self.action_executor.execute_actions(reply, self.search_provider)
@@ -200,9 +215,6 @@ class CodingAgent:
 
         # Log the activity
         agent_logger.log_agent_activity(prompt, response, [])
-
-        # Log API call timing
-        agent_logger.log_api_call("llm", "chat", 200, duration)
 
         return response
 

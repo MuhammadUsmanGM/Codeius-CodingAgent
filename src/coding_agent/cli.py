@@ -353,22 +353,37 @@ def add_custom_model(agent):
     except Exception as e:
         console.print(f"[bold red]Error adding custom model: {str(e)}[/bold red]")
 
-def package_inspect_task(agent, package_name):
-    """Handle package inspection tasks"""
-    # Find the package inspector provider
-    inspector_provider = None
-    for provider in agent.providers:
-        if hasattr(provider, 'server_name') and provider.server_name == 'package_inspector':
-            inspector_provider = provider
-            break
-
-    if not inspector_provider:
-        console.print("[bold red]Error: Package inspector server not available.[/bold red]")
+def run_test(file_path: str):
+    """Run a specific test file using pytest"""
+    if not os.path.exists(file_path):
+        console.print(f"[bold red]Test file not found: {file_path}[/bold red]")
         return
 
-    console.print(f"[bold yellow]Inspecting package: {package_name}[/bold yellow]")
-    console.print("[bold]This would send the request to the package inspector server...[/bold]")
-    console.print("[dim]In a real implementation, the server would return detailed package information including dependencies, licenses, and vulnerabilities.[/dim]")
+    console.print(f"[bold yellow]Running tests in: {file_path}[/bold yellow]")
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["pytest", file_path],
+            capture_output=True,
+            text=True,
+            timeout=120  # 2-minute timeout
+        )
+        if result.stdout:
+            console.print(f"[white]{result.stdout}[/white]")
+        if result.stderr:
+            console.print(f"[bold red]{result.stderr}[/bold red]")
+        
+        if result.returncode == 0:
+            console.print("[bold green]✅ All tests passed![/bold green]")
+        else:
+            console.print(f"[bold red]❌ Tests failed with exit code: {result.returncode}[/bold red]")
+
+    except FileNotFoundError:
+        console.print("[bold red]Error: `pytest` command not found. Please ensure pytest is installed and in your PATH.[/bold red]")
+    except subprocess.TimeoutExpired:
+        console.print("[bold red]Error: Tests timed out after 2 minutes.[/bold red]")
+    except Exception as e:
+        console.print(f"[bold red]An unexpected error occurred: {e}[/bold red]")
 
 
 def execute_shell_command_safe(command):
@@ -636,9 +651,39 @@ def show_performance_dashboard():
     """Show performance metrics dashboard"""
     console.print("[bold blue]📊 Generating performance dashboard...[/bold blue]")
     try:
-        visualization_manager = VisualizationManager()
-        result = visualization_manager.generate_performance_dashboard()
-        console.print(f"[bold green]✅ {result}[/bold green]")
+        # In a real implementation, this would be generated from live data
+        from coding_agent.performance import PERF_MONITOR_FILE, PerformanceMonitor
+        import pickle
+        if not PERF_MONITOR_FILE.exists():
+            console.print("[bold yellow]No performance data available yet.[/bold yellow]")
+            return
+
+        with open(PERF_MONITOR_FILE, 'rb') as f:
+            perf_monitor = pickle.load(f)
+
+        table = Table(title="[bold green]Agent Performance Metrics[/bold green]", show_header=True, header_style="bold magenta")
+        table.add_column("Operation", style="cyan", no_wrap=True)
+        table.add_column("Count", style="green", justify="right")
+        table.add_column("Total Time (s)", style="yellow", justify="right")
+        table.add_column("Success", style="green", justify="right")
+        table.add_column("Fail", style="red", justify="right")
+        table.add_column("Avg. Time (s)", style="blue", justify="right")
+
+        for op, metrics in sorted(perf_monitor.metrics.items()):
+            try:
+                table.add_row(
+                    op,
+                    str(metrics.get('count', 0)),
+                    f"{metrics.get('total_duration', 0):.4f}",
+                    str(metrics.get('success_count', 0)),
+                    str(metrics.get('failure_count', 0)),
+                    f"{metrics.get('avg_duration', 0):.4f}"
+                )
+            except KeyError:
+                # Handle cases where a metric might be missing
+                console.print(f"[bold red]Incomplete data for operation: {op}[/bold red]")
+        
+        console.print(table)
     except Exception as e:
         console.print(f"[bold red]Error generating performance dashboard: {str(e)}[/bold red]")
 
@@ -722,8 +767,10 @@ def display_help():
         ("/dep_graph", "Show dependency graph visualization"),
         ("/proj_struct", "Show project structure visualization"),
         ("/perf_dash", "Show performance metrics dashboard"),
+        ("/performance", "Show performance metrics dashboard"),
         ("/viz_summary", "Show analysis summary dashboard"),
         ("/analyze", "Analyze the current project structure and content"),
+        ("/run_test [file_path]", "Run a specific test file"),
         ("/help", "Show this help message"),
         ("/clear", "Clear the conversation history"),
         ("/exit", "Exit the application")
@@ -1362,11 +1409,19 @@ def main():
                 elif prompt.lower() == '/proj_struct':
                     show_project_structure()
                     continue
-                elif prompt.lower() == '/perf_dash':
+                elif prompt.lower() == '/perf_dash' or prompt.lower() == '/performance':
                     show_performance_dashboard()
                     continue
                 elif prompt.lower() == '/viz_summary':
                     show_analysis_summary()
+                    continue
+                elif prompt.lower().startswith('/run_test '):
+                    parts = prompt.split(' ', 1)
+                    if len(parts) > 1:
+                        file_path = parts[1].strip()
+                        run_test(file_path)
+                    else:
+                        console.print("[bold red]Please specify a file path. Usage: /run_test [file_path][/bold red]")
                     continue
                 elif prompt.lower() == '/analyze':
                     analyze_project_command()

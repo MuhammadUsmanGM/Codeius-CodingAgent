@@ -11,6 +11,18 @@ from datetime import datetime, timedelta
 from coding_agent.config import config_manager
 from coding_agent.logger import agent_logger
 from pathlib import Path
+import pickle
+import atexit
+import os
+
+# Define cache file paths
+CACHE_DIR = Path.home() / ".codeius" / "cache"
+API_CACHE_FILE = CACHE_DIR / "api_cache.pkl"
+FILE_CACHE_FILE = CACHE_DIR / "file_cache.pkl"
+PERF_MONITOR_FILE = CACHE_DIR / "perf_monitor.pkl"
+
+# Ensure cache directory exists
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class SimpleCache:
@@ -108,9 +120,102 @@ class FileOperationCache:
             del self.cache[key]
 
 
-# Global cache instances
-api_cache = SimpleCache(ttl_seconds=config_manager.get_agent_config().mcp_server_timeout)
-file_cache = FileOperationCache(ttl_seconds=300)  # 5 minute TTL for file contents
+class PerformanceMonitor:
+    """Monitor and track performance metrics."""
+    
+    def __init__(self):
+        self.metrics = {}
+    
+    def record_operation(self, operation_name: str, duration: float, success: bool = True):
+        """Record an operation's performance."""
+        if operation_name not in self.metrics:
+            self.metrics[operation_name] = {
+                'count': 0,
+                'total_duration': 0.0,
+                'success_count': 0,
+                'failure_count': 0,
+                'avg_duration': 0.0
+            }
+        
+        metrics = self.metrics[operation_name]
+        metrics['count'] += 1
+        metrics['total_duration'] += duration
+        
+        if success:
+            metrics['success_count'] += 1
+        else:
+            metrics['failure_count'] += 1
+            
+        metrics['avg_duration'] = metrics['total_duration'] / metrics['count']
+        
+        # Log slow operations
+        if duration > 1.0:  # More than 1 second
+            agent_logger.app_logger.warning(f"Slow operation: {operation_name} took {duration:.2f}s")
+    
+    def get_metrics(self, operation_name: str) -> Dict[str, Any]:
+        """Get metrics for a specific operation."""
+        return self.metrics.get(operation_name, {})
+
+
+def save_caches():
+    """Save caches and performance monitor to disk."""
+    try:
+        with open(API_CACHE_FILE, 'wb') as f:
+            pickle.dump(api_cache, f)
+        with open(FILE_CACHE_FILE, 'wb') as f:
+            pickle.dump(file_cache, f)
+        with open(PERF_MONITOR_FILE, 'wb') as f:
+            pickle.dump(perf_monitor, f)
+        agent_logger.api_logger.debug("Caches and performance data saved successfully.")
+    except Exception as e:
+        agent_logger.api_logger.error(f"Error saving caches: {e}")
+
+
+def load_caches():
+    """Load caches and performance monitor from disk."""
+    global api_cache, file_cache, perf_monitor
+    
+    try:
+        if API_CACHE_FILE.exists():
+            with open(API_CACHE_FILE, 'rb') as f:
+                api_cache = pickle.load(f)
+        else:
+            api_cache = SimpleCache(ttl_seconds=config_manager.get_agent_config().mcp_server_timeout)
+    except Exception as e:
+        agent_logger.api_logger.error(f"Error loading API cache: {e}")
+        api_cache = SimpleCache(ttl_seconds=config_manager.get_agent_config().mcp_server_timeout)
+
+    try:
+        if FILE_CACHE_FILE.exists():
+            with open(FILE_CACHE_FILE, 'rb') as f:
+                file_cache = pickle.load(f)
+        else:
+            file_cache = FileOperationCache(ttl_seconds=300)
+    except Exception as e:
+        agent_logger.api_logger.error(f"Error loading file cache: {e}")
+        file_cache = FileOperationCache(ttl_seconds=300)
+
+    try:
+        if PERF_MONITOR_FILE.exists():
+            with open(PERF_MONITOR_FILE, 'rb') as f:
+                perf_monitor = pickle.load(f)
+        else:
+            perf_monitor = PerformanceMonitor()
+    except Exception as e:
+        agent_logger.api_logger.error(f"Error loading performance monitor: {e}")
+        perf_monitor = PerformanceMonitor()
+
+
+# Global cache and performance monitor instances
+api_cache: Optional[SimpleCache] = None
+file_cache: Optional[FileOperationCache] = None
+perf_monitor: Optional[PerformanceMonitor] = None
+
+# Load caches at startup
+load_caches()
+
+# Register save_caches to be called at exit
+atexit.register(save_caches)
 
 
 def cached_file_operation(operation: str = "read", ttl_seconds: int = 300):
@@ -148,16 +253,33 @@ def cached_file_operation(operation: str = "read", ttl_seconds: int = 300):
 
 def invalidate_file_cache(file_path: str):
     """Invalidate all cache entries for a specific file."""
-    # This is a simplified version - in a real implementation, you'd need to
-    # track which keys are associated with the file_path and remove them
-    # For now, we just clear the entire file cache
-    file_cache.clear()
+    # Find all cache keys associated with the file_path and remove them
+    keys_to_remove = [
+        key for key in file_cache.cache.keys()
+        if key.endswith(f"_{file_path}")
+    ]
+    for key in keys_to_remove:
+        file_cache.remove(key)
+    
+    if keys_to_remove:
+        agent_logger.api_logger.debug(f"Invalidated {len(keys_to_remove)} cache entries for {file_path}")
 
 
 def clear_all_caches():
-    """Clear both API and file caches."""
+    """Clear both API and file caches and delete cache files."""
     api_cache.clear()
     file_cache.clear()
+    
+    try:
+        if API_CACHE_FILE.exists():
+            os.remove(API_CACHE_FILE)
+        if FILE_CACHE_FILE.exists():
+            os.remove(FILE_CACHE_FILE)
+        if PERF_MONITOR_FILE.exists():
+            os.remove(PERF_MONITOR_FILE)
+        agent_logger.api_logger.debug("Cache files deleted.")
+    except Exception as e:
+        agent_logger.api_logger.error(f"Error deleting cache files: {e}")
 
 
 def generate_cache_key(*args, **kwargs) -> str:
@@ -222,44 +344,3 @@ def rate_limit(max_calls: int, time_window: int):
         
         return wrapper
     return decorator
-
-
-class PerformanceMonitor:
-    """Monitor and track performance metrics."""
-    
-    def __init__(self):
-        self.metrics = {}
-    
-    def record_operation(self, operation_name: str, duration: float, success: bool = True):
-        """Record an operation's performance."""
-        if operation_name not in self.metrics:
-            self.metrics[operation_name] = {
-                'count': 0,
-                'total_duration': 0.0,
-                'success_count': 0,
-                'failure_count': 0,
-                'avg_duration': 0.0
-            }
-        
-        metrics = self.metrics[operation_name]
-        metrics['count'] += 1
-        metrics['total_duration'] += duration
-        
-        if success:
-            metrics['success_count'] += 1
-        else:
-            metrics['failure_count'] += 1
-            
-        metrics['avg_duration'] = metrics['total_duration'] / metrics['count']
-        
-        # Log slow operations
-        if duration > 1.0:  # More than 1 second
-            agent_logger.app_logger.warning(f"Slow operation: {operation_name} took {duration:.2f}s")
-    
-    def get_metrics(self, operation_name: str) -> Dict[str, Any]:
-        """Get metrics for a specific operation."""
-        return self.metrics.get(operation_name, {})
-
-
-# Global performance monitor
-perf_monitor = PerformanceMonitor()
