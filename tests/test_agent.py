@@ -45,5 +45,13 @@ def test_run_test_command_not_found(capsys):
     assert "Test file not found" in captured.out
 
 
+def test_run_all_tests_command(capsys):
+    """Test the /test command"""
+    from coding_agent.cli import run_all_tests
+    run_all_tests()
+    captured = capsys.readouterr()
+    assert "Running all tests" in captured.out
+    assert "Test Results" in captured.out
+
 if __name__ == "__main__":
     pytest.main()

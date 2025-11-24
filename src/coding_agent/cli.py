@@ -308,50 +308,36 @@ def schedule_task(agent, task_type, interval, target=None):
     console.print("[bold]This would send the request to the task scheduler server...[/bold]")
     console.print("[dim]In a real implementation, the server would schedule the task to run automatically.[/dim]")
 
-def add_custom_model(agent):
-    """Handle adding a custom model with user input"""
-    console.print("[bold #00FFFF]Adding Custom Model[/bold #00FFFF]")
-    console.print("[white]Please provide the following information for your custom model:[/white]")
-
+def run_all_tests():
+    """Run all tests in the tests/ directory"""
+    console.print("[bold yellow]Running all tests...[/bold yellow]")
     try:
-        # Get model name
-        model_name = Prompt.ask("[bold #7CFC00]Model Name[/bold #7CFC00] (for identification)").strip()
-        if not model_name:
-            console.print("[bold red]Model name is required. Operation cancelled.[/bold red]")
-            return
-
-        # Get API key
-        api_key = Prompt.ask("[bold #7CFC00]API Key[/bold #7CFC00]", password=True).strip()
-        if not api_key:
-            console.print("[bold red]API key is required. Operation cancelled.[/bold red]")
-            return
-
-        # Get base URL
-        base_url = Prompt.ask("[bold #7CFC00]Base URL[/bold #7CFC00] (e.g., https://api.openai.com/v1)").strip()
-        if not base_url:
-            console.print("[bold red]Base URL is required. Operation cancelled.[/bold red]")
-            return
-
-        # Get model identifier
-        model_id = Prompt.ask("[bold #7CFC00]Model ID[/bold #7CFC00] (e.g., gpt-4, claude-3, etc.)").strip()
-        if not model_id:
-            console.print("[bold red]Model ID is required. Operation cancelled.[/bold red]")
-            return
-
-        # Add the custom model
-        success = agent.add_custom_model(model_name, api_key, base_url, model_id)
-
-        if success:
-            console.print(f"[bold #32CD32][GOOD] Custom model '{model_name}' has been added successfully![/bold #32CD32]")
-            console.print(f"[bold]You can now use this model with: /switch {model_name.lower().replace(' ', '_')}_X[/bold]")
-            console.print(f"[dim]Where X is the provider number shown in /models[/dim]")
+        import subprocess
+        result = subprocess.run(
+            ["pytest", "tests/"],
+            capture_output=True,
+            text=True,
+            timeout=300  # 5-minute timeout
+        )
+        
+        table = Table(title="[bold green]Test Results[/bold green]", show_header=True, header_style="bold magenta")
+        table.add_column("Status", style="cyan", no_wrap=True)
+        table.add_column("Output", style="white")
+        
+        if result.returncode == 0:
+            table.add_row("✅ All tests passed!", result.stdout)
         else:
-            console.print("[bold red][BAD] Failed to add custom model. Please check the provided information.[/bold red]")
+            table.add_row("❌ Tests failed!", f"{result.stdout}\n{result.stderr}")
+        
+        console.print(table)
 
-    except KeyboardInterrupt:
-        console.print("\n[bold yellow]Operation cancelled by user.[/bold yellow]")
+    except FileNotFoundError:
+        console.print("[bold red]Error: `pytest` command not found. Please ensure pytest is installed and in your PATH.[/bold red]")
+    except subprocess.TimeoutExpired:
+        console.print("[bold red]Error: Tests timed out after 5 minutes.[/bold red]")
     except Exception as e:
-        console.print(f"[bold red]Error adding custom model: {str(e)}[/bold red]")
+        console.print(f"[bold red]An unexpected error occurred: {e}[/bold red]")
+
 
 def run_test(file_path: str):
     """Run a specific test file using pytest"""
@@ -771,6 +757,7 @@ def display_help():
         ("/viz_summary", "Show analysis summary dashboard"),
         ("/analyze", "Analyze the current project structure and content"),
         ("/run_test [file_path]", "Run a specific test file"),
+        ("/test", "Run all tests"),
         ("/help", "Show this help message"),
         ("/clear", "Clear the conversation history"),
         ("/exit", "Exit the application")
@@ -1414,6 +1401,9 @@ def main():
                     continue
                 elif prompt.lower() == '/viz_summary':
                     show_analysis_summary()
+                    continue
+                elif prompt.lower() == '/test':
+                    run_all_tests()
                     continue
                 elif prompt.lower().startswith('/run_test '):
                     parts = prompt.split(' ', 1)
