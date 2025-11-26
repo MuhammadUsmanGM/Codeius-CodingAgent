@@ -9,6 +9,7 @@ from coding_agent.git_ops import GitOps
 from coding_agent.code_analyzer import CodeAnalyzer
 from coding_agent.logger import agent_logger
 from coding_agent.provider.mcp import MCPProvider
+from coding_agent.interactive_session import interactive_session_manager
 
 
 class ActionHandler(ABC):
@@ -182,6 +183,49 @@ class AnalyzeCodeHandler(ActionHandler):
             result = "❌ Error: analyze_code action requires either 'path' or both 'content' and 'filename' parameters"
             return result, False
 
+class StartProcessHandler(ActionHandler):
+    """Handle start_process actions."""
+
+    def handle(self, action: Dict[str, Any], search_provider: Optional[Any] = None) -> Tuple[str, bool]:
+        pid = interactive_session_manager.start_process(action["command"])
+        result = f"🚀 Started process with PID: {pid}"
+        return result, True
+
+
+class SendInputHandler(ActionHandler):
+    """Handle send_input actions."""
+
+    def handle(self, action: Dict[str, Any], search_provider: Optional[Any] = None) -> Tuple[str, bool]:
+        interactive_session_manager.send_input(action["pid"], action["data"])
+        result = f"📥 Sent input to process {action['pid']}"
+        return result, True
+
+
+class ReadOutputHandler(ActionHandler):
+    """Handle read_output actions."""
+
+    def handle(self, action: Dict[str, Any], search_provider: Optional[Any] = None) -> Tuple[str, bool]:
+        output = interactive_session_manager.read_output(action["pid"])
+        result = f"📤 Output from process {action['pid']}:\n{output}"
+        return result, True
+
+
+class ReadErrorHandler(ActionHandler):
+    """Handle read_error actions."""
+
+    def handle(self, action: Dict[str, Any], search_provider: Optional[Any] = None) -> Tuple[str, bool]:
+        error = interactive_session_manager.read_error(action["pid"])
+        result = f"🚨 Error from process {action['pid']}:\n{error}"
+        return result, True
+
+
+class StopProcessHandler(ActionHandler):
+    """Handle stop_process actions."""
+
+    def handle(self, action: Dict[str, Any], search_provider: Optional[Any] = None) -> Tuple[str, bool]:
+        interactive_session_manager.stop_process(action["pid"])
+        result = f"🛑 Stopped process {action['pid']}"
+        return result, True
 
 # Dictionary mapping action types to their handlers
 ACTION_HANDLERS: Dict[str, type] = {
@@ -194,4 +238,9 @@ ACTION_HANDLERS: Dict[str, type] = {
     "git_commit": GitCommitHandler,
     "web_search": WebSearchHandler,
     "analyze_code": AnalyzeCodeHandler,
+    "start_process": StartProcessHandler,
+    "send_input": SendInputHandler,
+    "read_output": ReadOutputHandler,
+    "read_error": ReadErrorHandler,
+    "stop_process": StopProcessHandler,
 }
