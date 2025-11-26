@@ -55,6 +55,8 @@ from prompt_toolkit.layout.containers import HSplit, Window
 from prompt_toolkit.layout.dimension import D
 from prompt_toolkit.application import Application
 from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.layout.processors import BeforeInput
+from prompt_toolkit.filters import is_multiline, has_suggestion
 load_dotenv()
 
 console = Console()
@@ -63,17 +65,20 @@ console = Console()
 def boxed_input_with_placeholder(
     placeholder="Type your message or @path/to/file",
     width=60,
-    height=3
+    height=3,
+    prompt_text="➤ "
 ):
     """
     Creates a rectangular input box with:
     - proper border
     - placeholder that disappears when typing
     """
-    style = Style.from_dict({
-        "frame.border": "bright_cyan",
+    # Define styles for the input box and text area
+    input_style = Style.from_dict({
+        "frame.border": "#FF00FF",  # Magenta border
         "textarea": "white",
         "placeholder": "italic #888888",
+        "prompt": "#00FFFF",  # Cyan for the prompt icon
     })
 
     # TextArea for input
@@ -83,7 +88,7 @@ def boxed_input_with_placeholder(
         width=D.exact(width),
         height=D.exact(height),
         style="class:textarea",
-        prompt="✦ ",  # Leading icon
+        prompt=prompt_text,  # Leading icon
     )
 
     # Use true placeholder property
@@ -97,23 +102,8 @@ def boxed_input_with_placeholder(
         height=D.exact(height + 2)
     )
 
-    layout = Layout(HSplit([frame]))
-
-    kb = KeyBindings()
-    @kb.add("enter")
-    def _(event):
-        # Exit app when Enter is pressed
-        event.app.exit(result=textarea.text)
-
-    # Create application
-    app = Application(
-        layout=layout,
-        style=style,
-        key_bindings=kb,
-        full_screen=False
-    )
-
-    return app.run()
+    # Return the layout and textarea for external use
+    return HSplit([frame]), textarea, input_style
 
 def confirm_safe_execution(result):
     console.print("The agent wants to perform these actions:", style="bold yellow")
@@ -1627,7 +1617,18 @@ class CustomCompleter(Completer):
                         yield Completion(cmd, start_position=-len(text))
 
 # Global variable to track Ctrl+C presses
+    # Global variable to track Ctrl+C presses
 first_ctrl_c_time = None
+
+# Keybindings for agent mode
+kb_agent = KeyBindings()
+
+@kb_agent.add("enter", eager=True)
+def _(event):
+    if event.current_buffer.text and event.current_buffer.text.strip():
+        event.app.exit(result=event.current_buffer.text)
+    else:
+        event.app.exit(result="")
 
 def main():
     global first_ctrl_c_time  # Use the global variable to track Ctrl+C presses
@@ -1694,8 +1695,36 @@ def main():
                 # Use boxed_input_with_placeholder function for the bordered input
                 try:
                     # Use the new boxed_input_with_placeholder function with custom placeholder
-                    prompt = boxed_input_with_placeholder(placeholder="Type your message or @path/to/file", width=inner_width, height=3)
-                    prompt = prompt.strip()
+                    input_layout, agent_textarea, agent_input_style = boxed_input_with_placeholder(
+                        placeholder="Ask Gemini, or type /help",
+                        width=inner_width,
+                        height=3,
+                        prompt_text="⭐ "
+                    )
+
+                    # Create a prompt session specifically for the agent input
+                    agent_session = PromptSession(
+                        message=HTML(""),  # Message is handled by the textarea's prompt
+                        completer=completer,
+                        style=agent_input_style,
+                        complete_while_typing=True,
+                        key_bindings=kb_agent, # Use specific keybindings for agent mode
+                        bottom_toolbar=None, # No bottom toolbar by default
+                        accept_default=True
+                    )
+
+                    # Run the application with the custom layout
+                    prompt = agent_session.prompt(
+                        get_current_prompt_text(),
+                        default=agent_textarea.text, # Pre-fill with existing text
+                        multiline=True, # Enable multiline input
+                        wrap_lines=True, # Wrap lines in input
+                        complete_style=CompleteStyle.MULTI_COLUMN, # Enable multi-column completion
+                        style=agent_input_style,
+                        input_processors=[
+                            BeforeInput(filter=~is_multiline() & ~has_suggestion)
+                        ],
+                    ).strip()
                 except:
                     # Fallback if boxed_input_with_placeholder fails
                     prompt = session.prompt(
