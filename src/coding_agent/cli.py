@@ -61,6 +61,93 @@ load_dotenv()
 
 console = Console()
 
+# Global variable to store the current theme
+current_theme_name = "default"
+
+# Define theme configurations
+THEMES = {
+    "default": {
+        "interaction_style": Style.from_dict({
+            'prompt': 'bold #00FFFF',
+            'completion-menu': 'bg:#262626 #ffffff',
+            'completion-menu.completion.current': 'bg:#4a4a4a #ffffff',
+            'completion-menu.meta.completion': 'bg:#262626 #ffffff',
+            'completion-menu.meta.completion.current': 'bg:#4a4a4a #ffffff',
+        }),
+        "shell_style": Style.from_dict({
+            'prompt': 'bold #FF4500',  # Orange color for shell mode
+            'completion-menu': 'bg:#4a4a4a #ffffff',
+            'completion-menu.completion.current': 'bg:#262626 #ffffff',
+            'completion-menu.meta.completion': 'bg:#4a4a4a #ffffff',
+            'completion-menu.meta.completion.current': 'bg:#262626 #ffffff',
+        }),
+        "interaction_prompt_text": HTML('<style fg="#00FFFF" bg="black"><b>✦ Type your message or @path/to/file:</b> </style> '),
+        "shell_prompt_text": HTML('<style fg="#FF4500" bg="black"><b>🐚 Shell Mode:</b> </style> '),
+    },
+    "dark": {
+        "interaction_style": Style.from_dict({
+            'prompt': 'bold #6A0DAD', # Dark purple
+            'completion-menu': 'bg:#1a1a1a #cccccc',
+            'completion-menu.completion.current': 'bg:#3a3a3a #ffffff',
+            'completion-menu.meta.completion': 'bg:#1a1a1a #cccccc',
+            'completion-menu.meta.completion.current': 'bg:#3a3a3a #ffffff',
+        }),
+        "shell_style": Style.from_dict({
+            'prompt': 'bold #FFD700',  # Gold for shell mode
+            'completion-menu': 'bg:#3a3a3a #cccccc',
+            'completion-menu.completion.current': 'bg:#1a1a1a #ffffff',
+            'completion-menu.meta.completion': 'bg:#3a3a3a #cccccc',
+            'completion-menu.meta.completion.current': 'bg:#1a1a1a #ffffff',
+        }),
+        "interaction_prompt_text": HTML('<style fg="#6A0DAD" bg="black"><b>✦ Dark Mode Message:</b> </style> '),
+        "shell_prompt_text": HTML('<style fg="#FFD700" bg="black"><b>🐚 Dark Shell Mode:</b> </style> '),
+    },
+    "solarized": {
+        "interaction_style": Style.from_dict({
+            'prompt': 'bold #268bd2', # Solarized blue
+            'completion-menu': 'bg:#002b36 #839496',
+            'completion-menu.completion.current': 'bg:#073642 #fdf6e3',
+            'completion-menu.meta.completion': 'bg:#002b36 #839496',
+            'completion-menu.meta.completion.current': 'bg:#073642 #fdf6e3',
+        }),
+        "shell_style": Style.from_dict({
+            'prompt': 'bold #cb4b16',  # Solarized orange for shell mode
+            'completion-menu': 'bg:#073642 #839496',
+            'completion-menu.completion.current': 'bg:#002b36 #fdf6e3',
+            'completion-menu.meta.completion': 'bg:#073642 #839496',
+            'completion-menu.meta.completion.current': 'bg:#002b36 #fdf6e3',
+        }),
+        "interaction_prompt_text": HTML('<style fg="#268bd2" bg="black"><b>✦ Solarized Input:</b> </style> '),
+        "shell_prompt_text": HTML('<style fg="#cb4b16" bg="black"><b>🐚 Solarized Shell:</b> </style> '),
+    },
+    "terminal": {
+        "interaction_style": Style.from_dict({
+            'prompt': 'bold green',
+            'completion-menu': 'bg:black green',
+            'completion-menu.completion.current': 'bg:green black',
+            'completion-menu.meta.completion': 'bg:black green',
+            'completion-menu.meta.completion.current': 'bg:green black',
+        }),
+        "shell_style": Style.from_dict({
+            'prompt': 'bold yellow',  # Yellow for shell mode
+            'completion-menu': 'bg:green black',
+            'completion-menu.completion.current': 'bg:black green',
+            'completion-menu.meta.completion': 'bg:green black',
+            'completion-menu.meta.completion.current': 'bg:black green',
+        }),
+        "interaction_prompt_text": HTML('<style fg="green" bg="black"><b>$ Enter command:</b> </style> '),
+        "shell_prompt_text": HTML('<style fg="yellow" bg="black"><b>$ Shell></b> </style> '),
+    },
+}
+
+def apply_theme(theme_name):
+    global current_theme_name
+    if theme_name in THEMES:
+        current_theme_name = theme_name
+        console.print(f"[bold green]Theme switched to '{theme_name}'[/bold green]")
+    else:
+        console.print(f"[bold red]Theme '{theme_name}' not found.[/bold red]")
+
 
 def boxed_input_with_placeholder(
     placeholder="Type your message or @path/to/file",
@@ -604,11 +691,12 @@ def create_plugin(agent, name):
 def display_themes():
     """Display available themes and allow user to customize the interface"""
     console.print("\n[bold #9370DB]Visual Themes:[/bold #9370DB]")
-    console.print("  [cyan]default[/cyan] - Standard theme with blue and magenta accents")
-    console.print("  [cyan]dark[/cyan] - Dark theme optimized for low-light environments")
-    console.print("  [cyan]solarized[/cyan] - Solarized color scheme for eye comfort")
-    console.print("  [cyan]terminal[/cyan] - Classic terminal look with green accents\n")
-    console.print("[bold]To change theme, modify the colors in the CLI code directly.[/bold]\n")
+    theme_choices = list(THEMES.keys())
+    for theme in theme_choices:
+        console.print(f"  [cyan]{theme}[/cyan]")
+
+    selected_theme = Prompt.ask("\n[bold yellow]Select a theme[/bold yellow]", choices=theme_choices, default=current_theme_name).strip().lower()
+    apply_theme(selected_theme)
 
 def analyze_project_command():
     """Analyze the current project and provide insights"""
@@ -1615,6 +1703,37 @@ class CustomCompleter(Completer):
                 for cmd in commands:
                     if cmd.startswith(text.lower()):
                         yield Completion(cmd, start_position=-len(text))
+        elif '@' in text:
+            # Handle path completion when '@' is present
+            at_pos = text.rfind('@')
+            path_prefix = text[at_pos+1:]
+            
+            # Base directory for completion is the current working directory
+            base_dir = os.getcwd()
+            
+            # The part of the path to complete
+            path_to_complete = os.path.join(base_dir, path_prefix)
+            
+            # Directory of the path to complete
+            dirname = os.path.dirname(path_to_complete)
+            
+            # The prefix to match against in the directory
+            prefix = os.path.basename(path_to_complete)
+
+            try:
+                if os.path.isdir(dirname):
+                    for filename in os.listdir(dirname):
+                        if filename.lower().startswith(prefix.lower()):
+                            full_path = os.path.join(dirname, filename)
+                            # The completion text should be relative to the input after '@'
+                            completion_text = os.path.join(os.path.dirname(path_prefix), filename)
+                            if os.path.isdir(full_path):
+                                yield Completion(completion_text + '/', start_position=-len(prefix), display_meta='directory')
+                            else:
+                                yield Completion(completion_text, start_position=-len(prefix), display_meta='file')
+            except OSError:
+                # Ignore errors like permission denied
+                pass
 
 # Global variable to track Ctrl+C presses
     # Global variable to track Ctrl+C presses
@@ -1633,6 +1752,7 @@ def _(event):
 def main():
     global first_ctrl_c_time  # Use the global variable to track Ctrl+C presses
     display_welcome_screen()
+    apply_theme(current_theme_name) # Apply the default theme at startup
 
     agent = CodingAgent()
     # Plugins already loaded during agent initialization, no need to load again
@@ -1647,32 +1767,18 @@ def main():
         try:
             # Create a prompt session with enhanced styling and custom completion based on current mode
             def get_current_style():
+                global current_theme_name
                 if mode_container['interaction']:
-                    # Standard interaction mode style
-                    return Style.from_dict({
-                        'prompt': 'bold #00FFFF',
-                        'completion-menu': 'bg:#262626 #ffffff',
-                        'completion-menu.completion.current': 'bg:#4a4a4a #ffffff',
-                        'completion-menu.meta.completion': 'bg:#262626 #ffffff',
-                        'completion-menu.meta.completion.current': 'bg:#4a4a4a #ffffff',
-                    })
+                    return THEMES[current_theme_name]["interaction_style"]
                 else:
-                    # Shell mode style - different colors
-                    return Style.from_dict({
-                        'prompt': 'bold #FF4500',  # Orange color for shell mode
-                        'completion-menu': 'bg:#4a4a4a #ffffff',
-                        'completion-menu.completion.current': 'bg:#262626 #ffffff',
-                        'completion-menu.meta.completion': 'bg:#4a4a4a #ffffff',
-                        'completion-menu.meta.completion.current': 'bg:#262626 #ffffff',
-                    })
+                    return THEMES[current_theme_name]["shell_style"]
 
             def get_current_prompt_text():
+                global current_theme_name
                 if mode_container['interaction']:
-                    # For interaction mode, return the beautiful prompt
-                    return HTML('<style fg="#00FFFF" bg="black"><b>✦ Type your message or @path/to/file:</b> </style> ')
+                    return THEMES[current_theme_name]["interaction_prompt_text"]
                 else:
-                    # Shell mode remains as before but with new style
-                    return HTML('<style fg="#FF4500" bg="black"><b>🐚 Shell Mode:</b> </style> ')
+                    return THEMES[current_theme_name]["shell_prompt_text"]
 
             # Create session with updated style
             session = PromptSession(
@@ -1758,7 +1864,9 @@ def main():
                 elif prompt.lower() == '/themes':
                     display_themes()
                     continue
-                elif prompt.lower().startswith('/ocr '):
+                elif prompt.lower() == '/keys' or prompt.lower() == '/shortcuts':
+                    display_help()
+                    continue
                     # Extract image path from the command
                     parts = prompt.split(' ', 1)
                     if len(parts) > 1:

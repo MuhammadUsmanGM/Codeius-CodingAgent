@@ -11,7 +11,11 @@ from dataclasses import dataclass, field
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv()
+# First, try to load .env, then fallback to .env.default
+if os.path.exists('.env'):
+    load_dotenv(dotenv_path='.env')
+elif os.path.exists('.env.default'):
+    load_dotenv(dotenv_path='.env.default')
 
 @dataclass
 class AgentConfig:
