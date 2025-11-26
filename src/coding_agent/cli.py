@@ -1798,6 +1798,11 @@ def main():
         init_command()
         sys.exit(0)
 
+    if len(sys.argv) > 1 and sys.argv[1] == 'web':
+        from gui_server import run_gui
+        run_gui()
+        sys.exit(0)
+
     global first_ctrl_c_time  # Use the global variable to track Ctrl+C presses
     display_welcome_screen()
     apply_theme(current_theme_name) # Apply the default theme at startup
