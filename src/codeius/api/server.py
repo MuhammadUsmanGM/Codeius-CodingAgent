@@ -5,7 +5,7 @@ import socket
 from flask import Flask, send_from_directory, request, jsonify
 from flask_socketio import SocketIO
 from flask_cors import CORS
-from src.coding_agent.agent import CodingAgent
+from codeius.core.agent import CodingAgent
 
 app = Flask(__name__, static_folder='codeius-ui/build/static')
 CORS(app)  # Enable CORS for all routes

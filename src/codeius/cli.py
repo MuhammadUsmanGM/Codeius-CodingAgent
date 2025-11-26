@@ -1799,7 +1799,7 @@ def main():
         sys.exit(0)
 
     if len(sys.argv) > 1 and sys.argv[1] == 'web':
-        from gui_server import run_gui
+        from codeius.api.server import run_gui
         run_gui()
         sys.exit(0)
 
