@@ -3,6 +3,7 @@
 import sys
 import os
 import time
+import shutil
 from threading import Thread
 from typing import Generator
 from coding_agent.agent import CodingAgent
@@ -45,9 +46,74 @@ from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.shortcuts import CompleteStyle
 from prompt_toolkit.shortcuts import prompt
 from prompt_toolkit.patch_stdout import patch_stdout
+from prompt_toolkit import PromptSession
+from prompt_toolkit.styles import Style
+from prompt_toolkit.formatted_text import HTML
+from prompt_toolkit.layout import Layout
+from prompt_toolkit.widgets import Box, Frame, TextArea
+from prompt_toolkit.layout.containers import HSplit, Window
+from prompt_toolkit.layout.dimension import D
+from prompt_toolkit.application import Application
+from prompt_toolkit.key_binding import KeyBindings
 load_dotenv()
 
 console = Console()
+
+
+def boxed_input_with_placeholder(
+    placeholder="Type your message or @path/to/file",
+    width=60,
+    height=3
+):
+    """
+    Creates a rectangular input box with:
+    - proper border
+    - placeholder that disappears when typing
+    """
+    style = Style.from_dict({
+        "frame.border": "bright_cyan",
+        "textarea": "white",
+        "placeholder": "italic #888888",
+    })
+
+    # TextArea for input
+    textarea = TextArea(
+        multiline=True,
+        wrap_lines=True,
+        width=D.exact(width),
+        height=D.exact(height),
+        style="class:textarea",
+        prompt="✦ ",  # Leading icon
+    )
+
+    # Use true placeholder property
+    textarea.placeholder = placeholder
+
+    # Frame adds a rectangular border
+    frame = Frame(
+        textarea,
+        style="class:frame",
+        width=D.exact(width + 2),
+        height=D.exact(height + 2)
+    )
+
+    layout = Layout(HSplit([frame]))
+
+    kb = KeyBindings()
+    @kb.add("enter")
+    def _(event):
+        # Exit app when Enter is pressed
+        event.app.exit(result=textarea.text)
+
+    # Create application
+    app = Application(
+        layout=layout,
+        style=style,
+        key_bindings=kb,
+        full_screen=False
+    )
+
+    return app.run()
 
 def confirm_safe_execution(result):
     console.print("The agent wants to perform these actions:", style="bold yellow")
@@ -838,7 +904,7 @@ def display_help():
 def display_welcome_screen():
     """Display a cleaner welcome screen with project info and instructions"""
 
-    # Import the bulletproof header implementation
+    # Import the responsive header implementation
     import sys
     import io
     from rich.console import Console
@@ -853,21 +919,17 @@ def display_welcome_screen():
     # BULLETPROOF UTF-8 ENCODING FIX FOR WINDOWS
     if sys.platform == 'win32':
         try:
-            # Method 1: Reconfigure stdout/stderr
             sys.stdout.reconfigure(encoding='utf-8')
             sys.stderr.reconfigure(encoding='utf-8')
         except AttributeError:
-            # Method 2: Wrap with TextIOWrapper (older Python versions)
             sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
             sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
-    # Initialize console with forced unicode
     console = Console(force_terminal=True, force_interactive=False)
 
     def can_use_unicode():
         """Check if terminal supports Unicode"""
         try:
-            # Test if we can encode Unicode block character
             '█'.encode(sys.stdout.encoding or 'utf-8')
             return True
         except (UnicodeEncodeError, AttributeError):
@@ -947,7 +1009,7 @@ def display_welcome_screen():
                 "######"
             ]
         }
-        return letters, '#'
+        return letters, '#', 6
 
     def create_unicode_letters():
         """Unicode block letters"""
@@ -1016,22 +1078,142 @@ def display_welcome_screen():
                 "██████"
             ]
         }
-        return letters, '█'
+        return letters, '█', 6
 
-    def create_logo_letters():
-        """Create CODEIUS letters with proper encoding detection"""
+    def create_compact_letters():
+        """Compact letters for smaller terminals"""
+        letters = {
+            'C': [
+                "████",
+                "██  ",
+                "██  ",
+                "██  ",
+                "████"
+            ],
+            'O': [
+                "████",
+                "█  █",
+                "█  █",
+                "█  █",
+                "████"
+            ],
+            'D': [
+                "███ ",
+                "█  █",
+                "█  █",
+                "█  █",
+                "███ "
+            ],
+            'E': [
+                "████",
+                "██  ",
+                "███ ",
+                "██  ",
+                "████"
+            ],
+            'I': [
+                "████",
+                " ██ ",
+                " ██ ",
+                " ██ ",
+                "████"
+            ],
+            'U': [
+                "█  █",
+                "█  █",
+                "█  █",
+                "█  █",
+                "████"
+            ],
+            'S': [
+                "████",
+                "██  ",
+                "████",
+                "  ██",
+                "████"
+            ]
+        }
+        return letters, '█', 4
+
+    def create_tiny_letters():
+        """Tiny letters for very small terminals"""
+        letters = {
+            'C': ["██", "█ ", "██"],
+            'O': ["██", "█ █", "██"],
+            'D': ["██", "█ █", "██"],
+            'E': ["██", "██", "██"],
+            'I': ["██", "██", "██"],
+            'U': ["█ █", "█ █", "██"],
+            'S': ["██", "██", "██"]
+        }
+        return letters, '█', 2
+
+    def calculate_optimal_spacing(term_width, letter_width, num_letters):
+        """Calculate spacing to maximize width usage"""
+        # Account for panel borders and padding (roughly 20 chars)
+        usable_width = term_width - 20
+
+        # Total letter width
+        total_letter_width = letter_width * num_letters
+
+        # Calculate available space for gaps
+        available_space = usable_width - total_letter_width
+
+        # Number of gaps between letters
+        num_gaps = num_letters - 1
+
+        if available_space <= 0 or num_gaps <= 0:
+            return 1  # Minimum spacing
+
+        # Calculate spacing per gap
+        spacing = max(1, available_space // num_gaps)
+
+        # Cap maximum spacing to avoid too much spread
+        return min(spacing, 8)
+
+    def create_logo_letters(term_width):
+        """Create CODEIUS letters with responsive sizing"""
         use_unicode = can_use_unicode()
 
-        if use_unicode:
-            letters, block = create_unicode_letters()
+        # Determine size based on terminal width
+        if term_width >= 110:
+            # Large: normal size
+            if use_unicode:
+                letters, block, letter_width = create_unicode_letters()
+            else:
+                letters, block, letter_width = create_ascii_letters()
+        elif term_width >= 80:
+            # Medium: compact size
+            if use_unicode:
+                letters, block, letter_width = create_compact_letters()
+            else:
+                letters = create_compact_letters()[0]
+                block = '#'
+                letter_width = 4
+        elif term_width >= 50:
+            # Small: tiny size
+            if use_unicode:
+                letters, block, letter_width = create_tiny_letters()
+            else:
+                letters = create_tiny_letters()[0]
+                block = '#'
+                letter_width = 2
         else:
-            letters, block = create_ascii_letters()
+            # Extra small: text only
+            return None, None, None, None, 0
 
         word = "CODEIUS"
-        spacing = "  "
+        num_letters = len(word)
 
+        # Calculate optimal spacing
+        spacing_size = calculate_optimal_spacing(term_width, letter_width, num_letters)
+        spacing = " " * spacing_size
+
+        # Combine letters horizontally
+        num_rows = len(letters['C'])
         combined_lines = []
-        for row in range(7):
+
+        for row in range(num_rows):
             line = ""
             for i, char in enumerate(word):
                 line += letters[char][row]
@@ -1039,7 +1221,7 @@ def display_welcome_screen():
                     line += spacing
             combined_lines.append(line)
 
-        return combined_lines, block, use_unicode
+        return combined_lines, block, use_unicode, num_rows, letter_width
 
     def apply_gradient(text_lines, block_char):
         """Apply gradient coloring"""
@@ -1076,38 +1258,38 @@ def display_welcome_screen():
                 console.print(str(text).encode('ascii', 'replace').decode('ascii'))
 
     def display_header():
-        """Display bulletproof header"""
+        """Display fully responsive header"""
 
         console.clear()
         term_width = get_terminal_width()
 
-        # Create letters with encoding detection
-        letter_lines, block_char, use_unicode = create_logo_letters()
-
-        # Apply gradient
-        gradient_art = apply_gradient(letter_lines, block_char)
-
-        # Check if art fits
-        art_width = len(letter_lines[0])
+        # Create letters with responsive sizing
+        letter_lines, block_char, use_unicode, num_rows, letter_width = create_logo_letters(term_width)
 
         try:
-            if art_width + 20 > term_width:
-                # Too narrow - simple title
+            if letter_lines is None:
+                # Terminal too small - text only
                 console.print()
                 title = Text("CODEIUS", style="bold bright_magenta")
                 safe_print_unicode(Align.center(title))
                 console.print()
             else:
-                # Full art panel
+                # Apply gradient
+                gradient_art = apply_gradient(letter_lines, block_char)
+
+                # Build panel with art
                 panel_content = Text()
                 panel_content.append("\n")
                 panel_content.append(gradient_art)
                 panel_content.append("\n")
 
+                # Adjust padding based on terminal size
+                padding = (1, 4) if term_width >= 100 else (0, 2)
+
                 main_panel = Panel(
                     Align.center(panel_content),
                     border_style="bold bright_magenta",
-                    padding=(1, 4),
+                    padding=padding,
                 )
 
                 safe_print_unicode(main_panel)
@@ -1115,36 +1297,39 @@ def display_welcome_screen():
             # Ultimate fallback
             console.print("\n[bold bright_magenta]CODEIUS[/bold bright_magenta]\n")
 
-        # Subtitle (safe emojis)
+        # Subtitle
         try:
-            subtitle = Text("* ", style="bold #FF00FF")
+            subtitle = Text("✦ ", style="bold #FF00FF")
             subtitle.append("AI-POWERED CODING AGENT", style="bold italic bright_yellow")
-            subtitle.append(" *", style="bold #00F0FF")
+            subtitle.append(" ✦", style="bold #00F0FF")
             safe_print_unicode(Align.center(subtitle))
         except:
             console.print("[bold bright_yellow]AI-POWERED CODING AGENT[/bold bright_yellow]")
 
-        # Tagline (ASCII-safe symbols)
+        # Tagline
         try:
-            tagline = Text("> ", style="bold bright_cyan")
-            tagline.append("CODE SMARTER • BUILD FASTER • SHIP BETTER", style="bold bright_white")
-            tagline.append(" <", style="bold bright_cyan")
+            if term_width >= 80:
+                tagline = Text("⚡ ", style="bold bright_cyan")
+                tagline.append("CODE SMARTER • BUILD FASTER • SHIP BETTER", style="bold bright_white")
+                tagline.append(" ⚡", style="bold bright_cyan")
+            else:
+                tagline = Text("CODE SMARTER • BUILD FASTER", style="bold bright_white")
             safe_print_unicode(Align.center(tagline))
         except:
-            console.print("[bright_white]CODE SMARTER - BUILD FASTER - SHIP BETTER[/bright_white]")
+            console.print("[bright_white]CODE SMARTER - BUILD FASTER[/bright_white]")
 
         console.print()
 
-        # System info with safe output
+        # System info
         try:
             system_info = Table.grid(padding=(0, 2))
             system_info.add_column(style="bold #FF00FF", justify="right")
             system_info.add_column(style="bold bright_white")
 
-            system_info.add_row("SYSTEM", platform.system())
-            system_info.add_row("PYTHON", f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")
-            system_info.add_row("TIME", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-            system_info.add_row("STATUS", Text("ONLINE", style="bold bright_green"))
+            system_info.add_row("⚙ SYSTEM", platform.system())
+            system_info.add_row("🐍 PYTHON", f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")
+            system_info.add_row("🕐 TIME", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            system_info.add_row("⚡ STATUS", Text("ONLINE", style="bold bright_green"))
 
             info_panel = Panel(
                 system_info,
@@ -1160,16 +1345,16 @@ def display_welcome_screen():
 
         # Ready indicator
         try:
-            ready_text = Text(">> ", style="bold bright_green")
+            ready_text = Text("● ", style="bold bright_green")
             ready_text.append("READY TO CODE", style="bold bright_green")
-            ready_text.append(" <<", style="bold bright_green")
+            ready_text.append(" ●", style="bold bright_green")
             safe_print_unicode(Align.center(ready_text))
         except:
             console.print("[bold bright_green]READY TO CODE[/bold bright_green]")
 
         console.print()
 
-    # Display the bulletproof header
+    # Display the responsive header
     display_header()
 
     # Check if API keys are set and show warning if not
@@ -1425,521 +1610,21 @@ class CustomCompleter(Completer):
                 pass
             else:
                 # Provide command suggestions for commands that don't require parameters
-                commands = ['/models', '/mcp', '/dashboard', '/add_model', '/shell', '/toggle', '/mode', '/keys', '/shortcuts', '/context', '/ctx', '/set_project', '/search', '/find_function', '/find_class', '/file_context', '/autodetect', '/detect', '/security_scan', '/scan', '/secrets_scan', '/vuln_scan', '/policy_check', '/security_policy', '/policy', '/security_report', '/set_policy', '/ocr', '/refactor', '/diff', '/plugins', '/create_plugin', '/scaffold', '/env', '/rename', '/plot', '/update_docs', '/inspect', '/snippet', '/scrape', '/config', '/schedule', '/analyze', '/switch', '/help', '/clear', '/exit']
+                commands = [
+                    '/models', '/mcp', '/dashboard', '/themes', '/add_model', '/shell',
+                    '/toggle', '/mode', '/keys', '/shortcuts', '/context', '/ctx',
+                    '/set_project', '/search', '/find_function', '/find_class',
+                    '/file_context', '/autodetect', '/detect', '/security_scan',
+                    '/scan', '/secrets_scan', '/vuln_scan', '/policy_check',
+                    '/security_policy', '/policy', '/security_report', '/set_policy',
+                    '/ocr', '/refactor', '/diff', '/plugins', '/create_plugin',
+                    '/scaffold', '/env', '/rename', '/plot', '/update_docs',
+                    '/inspect', '/snippet', '/scrape', '/config', '/schedule',
+                    '/analyze', '/switch', '/help', '/clear', '/exit'
+                ]
                 for cmd in commands:
                     if cmd.startswith(text.lower()):
                         yield Completion(cmd, start_position=-len(text))
-
-def main():
-    # Initialize variable to track Ctrl+C presses
-    first_ctrl_c_time = None
-
-    display_welcome_screen()
-
-    agent = CodingAgent()
-    # Plugins already loaded during agent initialization, no need to load again
-
-    # Track the current mode (interaction or shell) - using a mutable container to allow updates
-    mode_container = {'interaction': True}
-
-    # Create a custom completer that handles both commands and model suggestions
-    completer = CustomCompleter(agent)
-
-    while True:
-        try:
-            # Create a prompt session with enhanced styling and custom completion based on current mode
-            def get_current_style():
-                if mode_container['interaction']:
-                    # Standard interaction mode style
-                    return Style.from_dict({
-                        'prompt': 'bold #00FFFF',
-                        'completion-menu': 'bg:#262626 #ffffff',
-                        'completion-menu.completion.current': 'bg:#4a4a4a #ffffff',
-                        'completion-menu.meta.completion': 'bg:#262626 #ffffff',
-                        'completion-menu.meta.completion.current': 'bg:#4a4a4a #ffffff',
-                    })
-                else:
-                    # Shell mode style - different colors
-                    return Style.from_dict({
-                        'prompt': 'bold #FF4500',  # Orange color for shell mode
-                        'completion-menu': 'bg:#4a4a4a #ffffff',
-                        'completion-menu.completion.current': 'bg:#262626 #ffffff',
-                        'completion-menu.meta.completion': 'bg:#4a4a4a #ffffff',
-                        'completion-menu.meta.completion.current': 'bg:#262626 #ffffff',
-                    })
-
-            def get_current_prompt_text():
-                if mode_container['interaction']:
-                    return HTML('<style fg="#00FFFF" bg="black"><b>⌨️ Enter your query:</b> </style> ')
-                else:
-                    return HTML('<style fg="#FF4500" bg="black"><b>🐚 Shell Mode:</b> </style> ')
-
-            # Create session with updated style
-            session = PromptSession(
-                completer=completer,
-                style=get_current_style(),
-                complete_while_typing=True,
-            )
-
-            # Styled prompt with enhanced visual indicator and auto-completion
-            prompt = session.prompt(
-                get_current_prompt_text(),
-                default='',
-                complete_style=CompleteStyle.MULTI_COLUMN,
-                style=get_current_style()
-            ).strip()
-
-            if not prompt: continue
-
-            # Handle special commands
-            if prompt.startswith('/'):
-                if prompt.lower() == '/models':
-                    display_models(agent)
-                    continue
-                elif prompt.lower() == '/mcp':
-                    display_mcp_tools(agent)
-                    continue
-                elif prompt.lower() == '/dashboard':
-                    display_dashboard()
-                    continue
-                elif prompt.lower() == '/themes':
-                    display_themes()
-                    continue
-                elif prompt.lower().startswith('/ocr '):
-                    # Extract image path from the command
-                    parts = prompt.split(' ', 1)
-                    if len(parts) > 1:
-                        image_path = parts[1].strip()
-                        ocr_image(agent, image_path)
-                    else:
-                        console.print("[bold red]Please specify an image path. Usage: /ocr [image_path][/bold red]")
-                    continue
-                elif prompt.lower().startswith('/refactor '):
-                    # Extract file path from the command
-                    parts = prompt.split(' ', 1)
-                    if len(parts) > 1:
-                        file_path = parts[1].strip()
-                        refactor_code(agent, file_path)
-                    else:
-                        console.print("[bold red]Please specify a file path. Usage: /refactor [file_path][/bold red]")
-                    continue
-                elif prompt.lower().startswith('/diff '):
-                    # Extract file paths from the command
-                    parts = prompt.split(' ', 2)  # Split into at most 3 parts: '/diff', 'file1', 'file2'
-                    if len(parts) == 3:
-                        file1, file2 = parts[1].strip(), parts[2].strip()
-                        diff_files(agent, file1, file2)
-                    else:
-                        console.print("[bold red]Please specify two file paths. Usage: /diff [file1] [file2][/bold red]")
-                    continue
-                elif prompt.lower() == '/plugins':
-                    show_plugins(agent)
-                    continue
-                elif prompt.lower().startswith('/create_plugin '):
-                    parts = prompt.split(' ', 1)
-                    if len(parts) > 1:
-                        plugin_name = parts[1].strip()
-                        create_plugin(agent, plugin_name)
-                    else:
-                        console.print("[bold red]Please specify a plugin name. Usage: /create_plugin [name][/bold red]")
-                    continue
-                elif prompt.lower().startswith('/scaffold '):
-                    parts = prompt.split(' ')
-                    args = [part.strip() for part in parts[1:] if part.strip()]
-                    automation_task(agent, 'scaffold', *args)
-                    continue
-                elif prompt.lower() == '/shell':
-                    console.print("[bold red]Please specify a command to execute. Usage: /shell [command][/bold red]")
-                    continue
-                elif prompt.lower().startswith('/shell '):
-                    parts = prompt.split(' ', 1)  # Split into at most 2 parts: '/shell' and 'command'
-                    if len(parts) > 1:
-                        command = parts[1].strip()
-                        execute_shell_command_safe(command)
-                    else:
-                        console.print("[bold red]Please specify a command to execute. Usage: /shell [command][/bold red]")
-                    continue
-                elif prompt.lower().startswith('/env '):
-                    parts = prompt.split(' ')
-                    args = [part.strip() for part in parts[1:] if part.strip()]
-                    automation_task(agent, 'env', *args)
-                    continue
-                elif prompt.lower().startswith('/rename '):
-                    parts = prompt.split(' ')
-                    args = [part.strip() for part in parts[1:] if part.strip()]
-                    automation_task(agent, 'rename', *args)
-                    continue
-                elif prompt.lower().startswith('/plot '):
-                    parts = prompt.split(' ', 1)
-                    if len(parts) > 1:
-                        metric_type = parts[1].strip()
-                        visualization_task(agent, metric_type)
-                    else:
-                        console.print("[bold red]Please specify a metric type. Usage: /plot [metric_type][/bold red]")
-                    continue
-                elif prompt.lower().startswith('/update_docs '):
-                    parts = prompt.split(' ', 2)
-                    if len(parts) > 1:
-                        doc_type = parts[1].strip()
-                        doc_args = parts[2].split(' ') if len(parts) > 2 else []
-                        self_document_task(agent, doc_type, *doc_args)
-                    else:
-                        console.print("[bold red]Please specify a documentation type. Usage: /update_docs [type] [args][/bold red]")
-                    continue
-                elif prompt.lower().startswith('/inspect '):
-                    parts = prompt.split(' ', 1)
-                    if len(parts) > 1:
-                        package_name = parts[1].strip()
-                        package_inspect_task(agent, package_name)
-                    else:
-                        console.print("[bold red]Please specify a package name. Usage: /inspect [package_name][/bold red]")
-                    continue
-                elif prompt.lower().startswith('/snippet '):
-                    parts = prompt.split(' ', 2)
-                    if len(parts) > 1:
-                        action = parts[1].strip()
-                        snippet_args = parts[2].split(' ') if len(parts) > 2 else []
-                        snippet_task(agent, action, *snippet_args)
-                    else:
-                        console.print("[bold red]Please specify an action. Usage: /snippet [action] [args][/bold red]")
-                        console.print("[bold]Available actions: get, add, list, insert[/bold]")
-                    continue
-                elif prompt.lower().startswith('/scrape '):
-                    parts = prompt.split(' ', 2)
-                    if len(parts) > 1:
-                        target = parts[1].strip()
-                        selector = parts[2].strip() if len(parts) > 2 else '*'
-                        scrape_task(agent, target, selector)
-                    else:
-                        console.print("[bold red]Please specify a target and selector. Usage: /scrape [file_or_dir_or_url] [css_selector][/bold red]")
-                        continue
-                elif prompt.lower().startswith('/config '):
-                    parts = prompt.split(' ', 2)
-                    if len(parts) > 1:
-                        action = parts[1].strip()
-                        config_args = parts[2].split(' ') if len(parts) > 2 else []
-                        config_task(agent, action, *config_args)
-                    else:
-                        console.print("[bold red]Please specify an action. Usage: /config [action] [args][/bold red]")
-                        console.print("[bold]Available actions: view, edit, list[/bold]")
-                        continue
-                elif prompt.lower().startswith('/schedule '):
-                    parts = prompt.split(' ', 3)
-                    if len(parts) > 2:
-                        task_type = parts[1].strip()
-                        interval = parts[2].strip()
-                        target = parts[3].strip() if len(parts) > 3 else None
-                        schedule_task(agent, task_type, interval, target)
-                    else:
-                        console.print("[bold red]Please specify task type and interval. Usage: /schedule [task_type] [interval] [target][/bold red]")
-                        console.print("[bold]Examples: /schedule 'test' 'every 30 mins'; /schedule 'script' 'daily at 09:00' 'my_script.py'[/bold]")
-                        continue
-                elif prompt.lower() == '/add_model' or prompt.lower() == '/addmodel':
-                    add_custom_model(agent)
-                    continue
-                elif prompt.lower() == '/toggle' or prompt.lower() == '/mode':
-                    # Toggle between interaction and shell modes
-                    mode_container['interaction'] = not mode_container['interaction']
-                    if mode_container['interaction']:
-                        console.print("[bold green]Mode: Interaction Mode - AI Agent Ready[/bold green]")
-                    else:
-                        console.print("[bold yellow]Mode: Shell Mode - Direct Command Execution[/bold yellow]")
-                    continue
-                elif prompt.lower() == '/context' or prompt.lower() == '/ctx':
-                    display_context_summary(agent.context_manager)
-                    continue
-                elif prompt.lower() == '/set_project' or prompt.lower().startswith('/set_project '):
-                    parts = prompt.split(' ', 2)  # Split into at most 3 parts: command, path, optional name
-                    if len(parts) >= 2:
-                        project_path = parts[1].strip()
-                        project_name = parts[2].strip() if len(parts) > 2 else None
-                        set_project_command(agent.context_manager, project_path, project_name)
-                    else:
-                        console.print("[bold red]Please specify a project path. Usage: /set_project [path] [optional_name][/bold red]")
-                    continue
-                elif prompt.lower().startswith('/search '):
-                    parts = prompt.split(' ', 1)
-                    if len(parts) > 1:
-                        query = parts[1].strip()
-                        semantic_search_command(agent.context_manager, query)
-                    else:
-                        console.print("[bold red]Please specify a search query. Usage: /search [query][/bold red]")
-                    continue
-                elif prompt.lower().startswith('/find_function '):
-                    parts = prompt.split(' ', 1)
-                    if len(parts) > 1:
-                        func_name = parts[1].strip()
-                        find_element_command(agent.context_manager, 'function', func_name)
-                    else:
-                        console.print("[bold red]Please specify a function name. Usage: /find_function [function_name][/bold red]")
-                    continue
-                elif prompt.lower().startswith('/find_class '):
-                    parts = prompt.split(' ', 1)
-                    if len(parts) > 1:
-                        class_name = parts[1].strip()
-                        find_element_command(agent.context_manager, 'class', class_name)
-                    else:
-                        console.print("[bold red]Please specify a class name. Usage: /find_class [class_name][/bold red]")
-                    continue
-                elif prompt.lower() == '/autodetect' or prompt.lower() == '/detect':
-                    auto_detect_project_command(agent.context_manager)
-                    continue
-                elif prompt.lower().startswith('/file_context '):
-                    parts = prompt.split(' ', 1)
-                    if len(parts) > 1:
-                        file_path = parts[1].strip()
-                        show_file_context(agent.context_manager, file_path)
-                    else:
-                        console.print("[bold red]Please specify a file path. Usage: /file_context [file_path][/bold red]")
-                    continue
-                elif prompt.lower() == '/security_scan' or prompt.lower() == '/scan':
-                    run_security_scan()
-                    continue
-                elif prompt.lower() == '/secrets_scan':
-                    run_secrets_detection()
-                    continue
-                elif prompt.lower() == '/vuln_scan':
-                    run_vulnerability_scan()
-                    continue
-                elif prompt.lower() == '/policy_check':
-                    run_policy_check()
-                    continue
-                elif prompt.lower() == '/security_policy' or prompt.lower() == '/policy':
-                    show_security_policy()
-                    continue
-                elif prompt.lower() == '/security_report':
-                    create_security_report()
-                    continue
-                elif prompt.lower().startswith('/set_policy '):
-                    parts = prompt.split(' ', 2)  # Split into command, key, value
-                    if len(parts) == 3:
-                        _, key, value = parts
-                        update_security_policy(key.strip(), value.strip())
-                    else:
-                        console.print("[bold red]Usage: /set_policy [setting_key] [value][/bold red]")
-                    continue
-                elif prompt.lower() == '/gen_viz' or prompt.lower() == '/visualize':
-                    generate_project_visualizations()
-                    continue
-                elif prompt.lower() == '/dep_graph':
-                    show_dependency_graph()
-                    continue
-                elif prompt.lower() == '/proj_struct':
-                    show_project_structure()
-                    continue
-                elif prompt.lower() == '/perf_dash' or prompt.lower() == '/performance':
-                    show_performance_dashboard()
-                    continue
-                elif prompt.lower() == '/viz_summary':
-                    show_analysis_summary()
-                    continue
-                elif prompt.lower() == '/test':
-                    run_all_tests()
-                    continue
-                elif prompt.lower().startswith('/run_test '):
-                    parts = prompt.split(' ', 1)
-                    if len(parts) > 1:
-                        file_path = parts[1].strip()
-                        run_test(file_path)
-                    else:
-                        console.print("[bold red]Please specify a file path. Usage: /run_test [file_path][/bold red]")
-                    continue
-                elif prompt.lower() == '/analyze':
-                    analyze_project_command()
-                    continue
-                elif prompt.lower().startswith('/switch '):
-                    parts = prompt.split(' ', 1)
-                    if len(parts) > 1:
-                        model_key = parts[1].strip()
-                        result = agent.switch_model(model_key)
-                        console.print(Panel(result, title="[bold green]Model Switch[/bold green]", expand=False))
-                        continue
-                    else:
-                        console.print("[bold red]Please specify a model. Use /models to see available models.[/bold red]")
-                        continue
-                elif prompt.lower() == '/help':
-                    display_help()
-                    continue
-                elif prompt.lower() == '/clear':
-                    agent.reset_history()
-                    console.print("[bold #32CD32][GOOD] Conversation history cleared.[/bold #32CD32]")
-                    continue
-                elif prompt.lower() == '/cls' or prompt.lower() == '/clear_screen':
-                    # Clear the entire screen with a visual effect
-                    console.clear()
-                    display_welcome_screen()
-                    continue
-                elif prompt.lower() == '/keys' or prompt.lower() == '/shortcuts':
-                    console.print("\n[bold #9370DB]Mode Switching Options:[/bold #9370DB]")
-                    console.print("  [bold]/toggle[/bold]: Command to toggle between Interaction and Shell modes")
-                    console.print("  [bold]Shift+![/bold]: Conceptual keyboard shortcut for mode switching")
-                    console.print("  [dim]Use /toggle command as the primary method for switching modes[/dim]")
-                    console.print()
-                    continue
-                elif prompt.lower() == '/exit':
-                    # Allow user to exit using /exit command
-                    # Display conversation history before exiting
-                    console.print(Panel("[bold yellow]Conversation Summary[/bold yellow]", expand=False))
-                    display_conversation_history(agent)
-                    console.print("\n[bold #32CD32]Thank you for using Codeius! Goodbye![/bold #32CD32]")
-                    break
-                elif prompt.lower().startswith('/create_project '):
-                    # Extract project details from the command
-                    parts = prompt.split(' ', 2)  # Split into at most 3 parts: '/create_project', 'type', 'name'
-                    if len(parts) >= 3:
-                        project_type = parts[1].strip().lower()
-                        project_name = parts[2].strip()
-
-                        # Import and execute the appropriate template function based on project type
-                        try:
-                            # Use the project_templates module to create the project
-                            from .project_templates import create_project
-                            create_project(project_type, project_name)
-                        except Exception as e:
-                            console.print(f"[bold red]Error creating project: {str(e)}[/bold red]")
-                    else:
-                        console.print("[bold red]Please specify both project type and name. Usage: /create_project [type] [name][/bold red]")
-                        console.print("[bold yellow]Available types: fastapi, flask, django, react, nodejs, ai_ml[/bold yellow]")
-                    continue
-                else:
-                    console.print(f"[bold red]Unknown command: {prompt}[/bold red]")
-                    console.print("[bold yellow]Available commands: Use /help to see full list of available commands[/bold yellow]")
-                    continue
-
-            if prompt.lower() == "exit":
-                # Display conversation history before exiting
-                console.print(Panel("[bold #FFD700]Conversation Summary[/bold #FFD700]", expand=False, border_style="#FFD700"))
-                display_conversation_history(agent)
-
-                # Create a visually appealing goodbye message
-                goodbye_table = Table(
-                    title="[bold #FFD700]Thank You![/bold #FFD700]",
-                    box=HEAVY_HEAD,
-                    border_style="#7CFC00",
-                    expand=True,
-                    title_style="bold #FFD700 on #00008B"
-                )
-                goodbye_table.add_column("Message", style="#7CFC00", justify="center")
-                goodbye_table.add_row("[bold #7CFC00]Thank you for using Codeius AI Coding Agent![/bold #7CFC00]")
-                goodbye_table.add_row("[#00FFFF]We hope you enjoyed the experience[/#00FFFF]")
-                goodbye_table.add_row("[bold #BA55D3]Come back soon![/bold #BA55D3]")
-                console.print("\n", goodbye_table)
-                time.sleep(1)  # Brief pause to enjoy the goodbye message
-                break
-
-            # Handle shell mode: if in shell mode, execute prompt as shell command
-            if not mode_container['interaction'] and not prompt.startswith('/'):
-                execute_shell_command_safe(prompt)
-                continue
-
-            # Show loading animation while waiting for agent response
-            console.print(f"[bold #00FFFF]Processing query...[/bold #00FFFF]")
-            import threading
-            stop_event = threading.Event()
-            loading_thread = threading.Thread(target=show_loading_animation, args=(stop_event,))
-            loading_thread.start()
-
-            try:
-                result = agent.ask(prompt)
-            finally:
-                stop_event.set()  # Stop the loading animation
-                loading_thread.join()  # Wait for the thread to finish
-                print()  # Add a newline after the loading message is cleared
-
-            # Save the conversation to history - fixed for refactored architecture
-            try:
-                # Try to access the history via conversation manager first
-                if hasattr(agent, 'conversation_manager') and hasattr(agent.conversation_manager, 'add_message'):
-                    agent.conversation_manager.add_message("user", prompt)
-                    agent.conversation_manager.add_message("assistant", result if not result.startswith("**Agent Plan:") else result)
-                else:
-                    # Fallback to direct history if conversation manager is not available
-                    agent.history.append({"role": "user", "content": prompt})
-                    agent.history.append({"role": "assistant", "content": result if not result.startswith("**Agent Plan:") else result})
-            except AttributeError:
-                # If there's any issue accessing the history, use the direct method
-                if hasattr(agent, 'history'):
-                    agent.history.append({"role": "user", "content": prompt})
-                    agent.history.append({"role": "assistant", "content": result if not result.startswith("**Agent Plan:") else result})
-
-            if result.startswith("**Agent Plan:**"):  # Looks like JSON action plan is parsed
-                if confirm_safe_execution(result):
-                    success_panel = Panel(
-                        "[bold #32CD32]Success![/bold #32CD32]\n\n[white]Action(s) executed successfully.[/white]",
-                        border_style="#32CD32",
-                        expand=False,
-                        padding=(1, 1)
-                    )
-                    console.print(success_panel)
-                    console.print()  # Add blank line
-                else:
-                    cancel_panel = Panel(
-                        "[bold #FF4500]Cancelled![/bold #FF4500]\n\n[white]Action(s) were not executed.[/white]",
-                        border_style="#FF4500",
-                        expand=False,
-                        padding=(1, 1)
-                    )
-                    console.print(cancel_panel)
-                    console.print()  # Add blank line
-            else:
-                # Enhanced agent response display with improved visual hierarchy
-                # Format the response with rich styling
-                formatted_result = format_agent_response(result)
-                agent_panel = Panel(
-                    formatted_result,
-                    title="[bold #BA55D3]🤖 Codeius Agent Response[/bold #BA55D3]",
-                    expand=False,
-                    border_style="#BA55D3",  # Medium purple border
-                    padding=(1, 1),
-                    highlight=True
-                )
-                console.print(agent_panel)
-                console.print()  # Add blank line for readability
-
-            # Optionally show recent conversation history
-            history_check = getattr(agent, 'history', [])
-            if hasattr(agent, 'conversation_manager') and hasattr(agent.conversation_manager, 'history'):
-                history_check = agent.conversation_manager.history
-
-            if len(history_check) > 0 and len([h for h in history_check if h["role"] == "user"]) % 3 == 0:
-                show_history = Prompt.ask("\n[bold yellow]Show conversation history?[/bold yellow] [Y/n]", default="Y").strip().lower()
-                if show_history in ("y", "yes", ""):
-                    display_conversation_history(agent)
-        except KeyboardInterrupt:
-            import time
-            current_time = time.time()
-
-            # Check if the first Ctrl+C happened less than 2 seconds ago
-            if first_ctrl_c_time is not None and (current_time - first_ctrl_c_time) < 2.0:
-                # Second Ctrl+C detected - exit now
-                console.print("\n[bold #FF4500]Double Ctrl+C detected – exiting immediately...[/bold #FF4500]")
-                # Display conversation history before exiting
-                console.print(Panel("[bold #FFD700]Conversation Summary[/bold #FFD700]", expand=False, border_style="#FFD700"))
-                display_conversation_history(agent)
-
-                # Create a visually appealing goodbye message
-                goodbye_table = Table(
-                    title="[bold #FFD700]Thank You![/bold #FFD700]",
-                    box=HEAVY_HEAD,
-                    border_style="#7CFC00",
-                    expand=True,
-                    title_style="bold #FFD700 on #00008B"
-                )
-                goodbye_table.add_column("Message", style="#7CFC00", justify="center")
-                goodbye_table.add_row("[bold #7CFC00]Thank you for using Codeius AI Coding Agent![/bold #7CFC00]")
-                goodbye_table.add_row("[#00FFFF]We hope you enjoyed the experience[/#00FFFF]")
-                goodbye_table.add_row("[bold #BA55D3]Come back soon![/bold #BA55D3]")
-                console.print("\n", goodbye_table)
-                time.sleep(1)  # Brief pause to enjoy the goodbye message
-                break
-            else:
-                # First Ctrl+C - set the timer and warn the user
-                first_ctrl_c_time = current_time
-                console.print("\n[bold yellow]Ctrl+C detected – press again within 2 seconds to exit[/bold yellow]")
-                # Continue the loop without breaking
-                continue
-        except Exception as e:
-            console.print(f"[bold red][BAD] Error: {e}[/bold red]")
 
 # Global variable to track Ctrl+C presses
 first_ctrl_c_time = None
@@ -1982,8 +1667,10 @@ def main():
 
             def get_current_prompt_text():
                 if mode_container['interaction']:
-                    return HTML('<style fg="#00FFFF" bg="black"><b>⌨️ Enter your query:</b> </style> ')
+                    # For interaction mode, return the beautiful prompt
+                    return HTML('<style fg="#00FFFF" bg="black"><b>✦ Type your message or @path/to/file:</b> </style> ')
                 else:
+                    # Shell mode remains as before but with new style
                     return HTML('<style fg="#FF4500" bg="black"><b>🐚 Shell Mode:</b> </style> ')
 
             # Create session with updated style
@@ -1993,13 +1680,38 @@ def main():
                 complete_while_typing=True,
             )
 
-            # Styled prompt with enhanced visual indicator and auto-completion
-            prompt = session.prompt(
-                get_current_prompt_text(),
-                default='',
-                complete_style=CompleteStyle.MULTI_COLUMN,
-                style=get_current_style()
-            ).strip()
+            # Get input based on mode
+            if mode_container['interaction']:
+                # Use the beautiful input box with placeholder where user types inside for interaction mode
+                try:
+                    term_width = shutil.get_terminal_size().columns
+                except:
+                    term_width = 100
+
+                # Calculate box size - leave room for borders, account for prompt icon
+                inner_width = min(term_width - 6, 80)  # Reduce max width to accommodate the prompt icon
+
+                # Use boxed_input_with_placeholder function for the bordered input
+                try:
+                    # Use the new boxed_input_with_placeholder function with custom placeholder
+                    prompt = boxed_input_with_placeholder(placeholder="Type your message or @path/to/file", width=inner_width, height=3)
+                    prompt = prompt.strip()
+                except:
+                    # Fallback if boxed_input_with_placeholder fails
+                    prompt = session.prompt(
+                        get_current_prompt_text(),
+                        default='',
+                        complete_style=CompleteStyle.MULTI_COLUMN,
+                        style=get_current_style()
+                    ).strip()
+            else:
+                # For shell mode, keep the old prompt
+                prompt = session.prompt(
+                    get_current_prompt_text(),
+                    default='',
+                    complete_style=CompleteStyle.MULTI_COLUMN,
+                    style=get_current_style()
+                ).strip()
 
             if not prompt: continue
 
@@ -2207,6 +1919,14 @@ def main():
                     console.print("\n", goodbye_table)
                     time.sleep(1)  # Brief pause to enjoy the goodbye message
                     break
+                elif prompt.lower() == '/toggle' or prompt.lower() == '/mode':
+                    # Toggle between interaction and shell modes
+                    mode_container['interaction'] = not mode_container['interaction']
+                    if mode_container['interaction']:
+                        console.print("[bold green]Mode: Interaction Mode - AI Agent Ready[/bold green]")
+                    else:
+                        console.print("[bold yellow]Mode: Shell Mode - Direct Command Execution[/bold yellow]")
+                    continue
                 elif prompt.lower() == '/add_model':
                     # Interactive model setup
                     console.print("\n[bold #40E0D0]Add Custom Model Setup[/bold #40E0D0]")
@@ -2265,10 +1985,15 @@ def main():
                 console.print("\n", goodbye_table)
                 time.sleep(1)  # Brief pause to enjoy the goodbye message
                 break
-            else:
-                # Process the prompt with the agent
-                result = agent.ask(prompt)
-                console.print(Panel(result, title="[bold #BA55D3]Codeius Agent Response[/bold #BA55D3]", border_style="#BA55D3", expand=False))
+
+            # Handle shell mode: if in shell mode and not a special command, execute prompt as shell command
+            if not mode_container['interaction'] and not prompt.startswith('/'):
+                execute_shell_command_safe(prompt)
+                continue
+
+            # Process the prompt with the agent
+            result = agent.ask(prompt)
+            console.print(Panel(result, title="[bold #BA55D3]Codeius Agent Response[/bold #BA55D3]", border_style="#BA55D3", expand=False))
         except KeyboardInterrupt:
             import time
             current_time = time.time()
