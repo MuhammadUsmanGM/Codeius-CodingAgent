@@ -44,3 +44,7 @@
 2025-11-26 06:55:09 - codeius.app - INFO - Conversation history reset
 2025-11-26 08:11:25 - codeius.app - WARNING - Slow operation: llm_chat took 5.77s
 2025-11-26 09:13:30 - codeius.app - WARNING - Slow operation: llm_chat took 6.57s
+2025-11-27 01:39:34 - codeius.app - WARNING - Slow operation: llm_chat took 5.93s
+2025-11-27 01:44:43 - codeius.app - WARNING - Slow operation: llm_chat took 5.58s
+2025-11-27 01:50:07 - codeius.app - INFO - Conversation history reset
+2025-11-27 01:53:02 - codeius.app - WARNING - Slow operation: llm_chat_stream took 5.39s
