@@ -48,3 +48,9 @@
 2025-11-27 01:44:43 - codeius.app - WARNING - Slow operation: llm_chat took 5.58s
 2025-11-27 01:50:07 - codeius.app - INFO - Conversation history reset
 2025-11-27 01:53:02 - codeius.app - WARNING - Slow operation: llm_chat_stream took 5.39s
+2025-11-27 07:32:04 - codeius.app - WARNING - Slow operation: llm_chat took 5.74s
+2025-11-27 07:58:27 - codeius.app - WARNING - Model switch failed: 1 not found
+2025-11-27 07:58:32 - codeius.app - WARNING - Model switch failed: 0 not found
+2025-11-27 07:58:41 - codeius.app - WARNING - Slow operation: llm_chat took 5.51s
+2025-11-27 12:40:37 - codeius.app - WARNING - Slow operation: llm_chat took 7.74s
+2025-11-27 12:40:56 - codeius.app - INFO - Model switched to groq_0

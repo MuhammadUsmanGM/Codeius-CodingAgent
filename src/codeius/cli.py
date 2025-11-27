@@ -2277,4 +2277,5 @@ def main():
             console.print(f"[bold red][BAD] Error: {e}[/bold red]")
 
 if __name__ == "__main__":
-    main()
+    from codeius.api.server import run_gui
+    run_gui()

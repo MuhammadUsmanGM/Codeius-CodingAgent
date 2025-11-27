@@ -7,22 +7,54 @@ from flask_socketio import SocketIO
 from flask_cors import CORS
 from codeius.core.agent import CodingAgent
 
-# Construct the absolute path to the dist folder directly
+# Get the directory of this file and go up to project root, then to Codeius-GUI
 import os
-# The relative path from this file to the dist folder is: ../../Codeius-GUI/dist
-current_file_dir = os.path.dirname(os.path.abspath(__file__))  # src/codeius/api/
-project_root_dir = os.path.dirname(os.path.dirname(os.path.dirname(current_file_dir)))  # project root
-dist_path = os.path.join(project_root_dir, 'Codeius-GUI', 'dist')
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(os.path.dirname(current_dir))
 
-# Verify the path exists before creating Flask app
-print(f"Looking for dist folder at: {dist_path}")
-print(f"Dist folder exists: {os.path.exists(dist_path)}")
+# Look for the dist folder in the correct location relative to the project
+codeius_gui_dir = os.path.join(project_root, 'Codeius-GUI')
+dist_path = os.path.join(codeius_gui_dir, 'dist')
 
-app = Flask(__name__,
-           static_folder=dist_path,
-           template_folder=dist_path)
+# Check if we're in development mode (dist may not exist) or if the path is different
+print(f"Looking for React build at: {dist_path}")
+print(f"Path exists: {os.path.exists(dist_path)}")
 
-# Enable CORS for all routes and allow development origin
+# If the standard path doesn't exist, try to find it relative to the current working directory
+if not os.path.exists(dist_path):
+    # Try to find the Codeius-GUI directory in the current working directory parent
+    import sys
+    import pathlib
+    # Get the project root (where pyproject.toml would be)
+    possible_roots = [
+        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(current_dir))), 'Codeius-GUI', 'dist'),  # Go up 3 levels
+        os.path.join(os.path.dirname(os.path.dirname(current_dir)), '..', 'Codeius-GUI', 'dist'),  # Go up 2, then up 1 more
+        os.path.join('.', 'Codeius-GUI', 'dist'),  # Same level as project root
+        os.path.join('..', 'Codeius-GUI', 'dist'),  # One level up
+    ]
+
+    for path in possible_roots:
+        abs_path = os.path.abspath(path)
+        print(f"Trying path: {abs_path} (exists: {os.path.exists(abs_path)})")
+        if os.path.exists(abs_path):
+            dist_path = abs_path
+            break
+
+# Now create the Flask app based on whether the dist folder exists
+if os.path.exists(dist_path):
+    # Store the found dist path in a variable that the app can use
+    final_dist_path = dist_path
+    app = Flask(__name__,
+               static_folder=final_dist_path,  # Path to built React app
+               template_folder=final_dist_path)
+    print("Production mode: Serving built React app")
+else:
+    final_dist_path = None
+    # If no production build, create app without static folder
+    app = Flask(__name__)
+    print("Warning: React build not found - please run 'npm run build' in the Codeius-GUI directory")
+    print("Using development mode with fallback message")
+
 CORS(app, resources={
     r"/api/*": {
         "origins": ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:*", "http://127.0.0.1:*"],
@@ -30,67 +62,130 @@ CORS(app, resources={
         "allow_headers": ["Content-Type", "Authorization"]
     }
 })
-
-# For SocketIO, we'll allow all origins for development but can be restricted in production
 socketio = SocketIO(app, cors_allowed_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:*", "http://127.0.0.1:*"])
 agent = CodingAgent()
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve(path):
-    # Check if static folder exists (the React build)
+    # Check if static folder exists (the built React app)
     if app.static_folder and os.path.exists(app.static_folder):
-        # If path is not empty, try to serve the specific file
+        # If a specific file is requested, try to serve it
         if path:
             static_path = os.path.join(app.static_folder, path)
             if os.path.exists(static_path):
                 return send_from_directory(app.static_folder, path)
             else:
-                # If file doesn't exist, serve index.html for client-side routing
+                # If the file doesn't exist, serve index.html for client-side routing
                 return send_from_directory(app.static_folder, 'index.html')
         else:
-            # If root path, serve index.html
+            # If root path, serve the main index.html
             return send_from_directory(app.static_folder, 'index.html')
-
-    # If no static folder exists, return an error (this shouldn't happen if build was done)
-    return "React application not built. Run 'npm run build' in Codeius-GUI directory.", 500
-
-@app.route('/api/ask', methods=['POST'])
-def ask():
-    try:
-        data = request.get_json()
-        prompt = data.get('prompt')
-        if not prompt:
-            return jsonify({'error': 'No prompt provided'}), 400
-
-        socketio.emit('agent_thinking', {'thinking': True})
-        response = agent.ask(prompt)
-        socketio.emit('agent_thinking', {'thinking': False})
-
-        return jsonify({'response': response})
-    except Exception as e:
-        print(f"Error in /api/ask endpoint: {str(e)}")
-        return jsonify({'error': 'Failed to process request', 'details': str(e)}), 500
-
-@app.route('/api/history')
-def history():
-    try:
-        return jsonify({'history': agent.conversation_manager.get_conversation_context()})
-    except Exception as e:
-        print(f"Error in /api/history endpoint: {str(e)}")
-        return jsonify({'error': 'Failed to get history', 'details': str(e)}), 500
+    else:
+        # If no static folder exists, return a page with instructions
+        # (This would only happen if the React app hasn't been built yet)
+        return '''
+        <h1 style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px; color: #333;">
+            Codeius Web Interface
+        </h1>
+        <div style="font-family: Arial, sans-serif; text-align: center; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <p style="font-size: 18px; color: #555;">
+                To use the full web interface, you have two options:
+            </p>
+            <div style="margin: 20px 0;">
+                <h3 style="color: #007acc;">Option 1: Production Build</h3>
+                <p>Run this command in the Codeius-GUI directory:</p>
+                <code style="background: #eef; padding: 8px; border-radius: 4px; display: inline-block;">npm run build</code>
+            </div>
+            <div style="margin: 20px 0;">
+                <h3 style="color: #007acc;">Option 2: Development Mode</h3>
+                <p>Run this command in the Codeius-GUI directory:</p>
+                <code style="background: #eef; padding: 8px; border-radius: 4px; display: inline-block;">npm run dev</code>
+                <p style="margin-top: 10px;">Then access the interface at <a href="http://localhost:3000" target="_blank">http://localhost:3000</a></p>
+            </div>
+            <p style="margin-top: 20px; font-style: italic; color: #888;">
+                The backend API is running on this server and will be accessible to the web interface.
+            </p>
+        </div>
+        '''
 
 @app.route('/api/models')
 def models():
     """Get available models"""
     try:
-        models = agent.get_available_models()
-        # Convert model objects to a list of dictionaries with 'name' and 'key'
-        serializable_models = [{"name": model.name, "key": model.key} for model in models]
+        model_list = agent.get_available_models()
+
+        # Handle different possible formats of model data
+        if isinstance(model_list, dict):
+            # If it's a dictionary format {key: model_obj_or_dict}
+            serializable_models = {}
+            for key, model_data in model_list.items():
+                if hasattr(model_data, 'name') and hasattr(model_data, 'key'):
+                    # If it's an object with name/key attributes
+                    serializable_models[key] = {
+                        "name": getattr(model_data, 'name', key),
+                        "provider": getattr(model_data, 'provider', 'unknown'),
+                        "description": getattr(model_data, 'description', '')
+                    }
+                elif isinstance(model_data, dict):
+                    # If it's already a dictionary
+                    serializable_models[key] = {
+                        "name": model_data.get('name', key),
+                        "provider": model_data.get('provider', 'unknown'),
+                        "description": model_data.get('description', '')
+                    }
+                else:
+                    # Fallback for other formats
+                    serializable_models[key] = {
+                        "name": str(model_data),
+                        "provider": "unknown",
+                        "description": ""
+                    }
+        elif isinstance(model_list, (list, tuple)):
+            # If it's a list/tuple of model objects
+            serializable_models = {}
+            for model in model_list:
+                if hasattr(model, 'key') and hasattr(model, 'name'):
+                    key = getattr(model, 'key', str(id(model)))
+                    serializable_models[key] = {
+                        "name": getattr(model, 'name', 'Unknown'),
+                        "provider": getattr(model, 'provider', 'unknown'),
+                        "description": getattr(model, 'description', '')
+                    }
+        else:
+            # Fallback for other formats
+            print(f"Unexpected model list format: {type(model_list)}")
+            serializable_models = {}
+
         return jsonify({'models': serializable_models})
     except Exception as e:
         print(f"Error in /api/models endpoint: {str(e)}")
         return jsonify({'error': 'Failed to get models', 'details': str(e)}), 500
+
+@app.route('/api/ask', methods=['POST'])
+def ask():
+    """Ask the AI assistant"""
+    try:
+        data = request.get_json()
+        prompt = data.get('prompt')
+        
+        if not prompt:
+            return jsonify({'error': 'No prompt provided'}), 400
+
+        # Show thinking indicator via socket
+        socketio.emit('agent_thinking', {'thinking': True})
+        
+        # Get response from agent
+        response = agent.ask(prompt)
+        
+        # Hide thinking indicator
+        socketio.emit('agent_thinking', {'thinking': False})
+        
+        return jsonify({'response': response})
+    except Exception as e:
+        print(f"Error in /api/ask endpoint: {str(e)}")
+        socketio.emit('agent_thinking', {'thinking': False})
+        return jsonify({'error': 'Failed to process request', 'details': str(e)}), 500
 
 @app.route('/api/switch_model', methods=['POST'])
 def switch_model():
@@ -117,28 +212,61 @@ def clear_history():
         print(f"Error in /api/clear_history endpoint: {str(e)}")
         return jsonify({'error': 'Failed to clear history', 'details': str(e)}), 500
 
-def find_free_port(start_port=8080):
-    """Find an available port to run the server on, starting with a default port."""
-    # Try the default port first
-    default_port = start_port
-    while True:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+# Health check endpoint
+@app.route('/api/health')
+def health():
+    """Health check endpoint"""
+    return jsonify({'status': 'healthy', 'message': 'Codeius backend is running'})
+
+def run_gui():
+    """Starts the Flask server on port 8080."""
+    import webbrowser
+    from rich.console import Console
+    from rich.table import Table
+
+    port = 8080  # Fixed port
+    local_url = f"http://localhost:{port}"
+    network_url = f"http://{get_network_ip()}:{port}"
+
+    # Create a rich console for better formatting
+    console = Console()
+
+    # Create a clean welcome message
+    table = Table(show_header=True, header_style="bold magenta", border_style="blue")
+    table.add_column("Type", style="cyan", justify="center")
+    table.add_column("URL", style="green")
+
+    table.add_row("Local", local_url)
+    table.add_row("Network", network_url)
+
+    console.print(table)
+    console.print("[bold yellow]Press 'o' to open in browser (one time only), or Ctrl+C to exit[/bold yellow]")
+
+    # Handle opening browser when 'o' is pressed
+    import threading
+    import sys
+
+    def check_input():
+        while True:
             try:
-                s.bind(('', default_port))
-                s.listen(1)
-                port = default_port
-                s.close()  # Close the socket after finding a free port
-                return port
-            except OSError:
-                # Port is in use, try the next one
-                default_port += 1
-                if default_port > 65535:  # Port range limit
-                    # If we've exhausted the range, go back to auto-assign
-                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                        s.bind(('', 0))
-                        s.listen(1)
-                        port = s.getsockname()[1]
-                    return port
+                user_input = input().strip().lower()
+                if user_input == 'o':
+                    webbrowser.open(local_url)
+                    console.print("\n[bold green]✓ Browser opened successfully![/bold green]")
+                    console.print("[bold yellow]Press Ctrl+C to exit.[/bold yellow]")
+                elif user_input in ['q', 'quit', 'exit']:
+                    console.print("\n[bold red]Shutting down server...[/bold red]")
+                    sys.exit(0)
+            except (EOFError, KeyboardInterrupt):
+                sys.exit(0)
+
+    # Start input thread
+    input_thread = threading.Thread(target=check_input, daemon=True)
+    input_thread.start()
+
+    # Run the server
+    socketio.run(app, host='0.0.0.0', port=port, debug=False, use_reloader=False)
+
 
 def get_network_ip():
     """Get the machine's network IP address"""
@@ -151,92 +279,6 @@ def get_network_ip():
     except Exception:
         return "127.0.0.1"
 
-def run_gui():
-    """Starts the Flask server on an available port."""
-    import threading
-    import webbrowser
-    from rich.console import Console
-    from rich.table import Table
-    from rich.text import Text
-
-    # Create a rich console for better formatting
-    console = Console()
-
-    port = find_free_port(8080)  # Default to port 8080, then try consecutive ports
-    local_url = f"http://localhost:{port}"
-    network_url = f"http://{get_network_ip()}:{port}"
-
-    # Print starting message
-    console.print("Starting Codeius Web...", style="bold blue")
-
-    # Create a table for URLs
-    table = Table(title="[bold green]Welcome to Codeius Web[/bold green]",
-                 title_justify="center",
-                 show_header=True,
-                 header_style="bold magenta",
-                 border_style="blue",
-                 title_style="bold green")
-    table.add_column("Type", style="cyan", no_wrap=True)
-    table.add_column("URL", style="green")
-
-    table.add_row("Local", local_url)
-    table.add_row("Network", network_url)
-
-    console.print(table)
-    console.print("[bold yellow]Press 'o' to open in browser (one time only), or Ctrl+C to exit[/bold yellow]")
-
-    # Define variables to control the key listener
-    global should_open_browser, browser_opened
-    should_open_browser = False
-    browser_opened = False  # Flag to prevent multiple openings
-
-    def check_keypress():
-        global should_open_browser, browser_opened
-        try:
-            import keyboard
-            while True:
-                event = keyboard.read_event()
-                if event.event_type == keyboard.KEY_DOWN:
-                    if event.name.lower() == 'o' and not browser_opened:
-                        should_open_browser = True
-                        browser_opened = True
-                        webbrowser.open(local_url)
-                        console.print("\n[bold green]✓ Browser opened successfully![/bold green]")
-                        console.print("[bold yellow]Browser already opened. Press Ctrl+C to exit.[/bold yellow]")
-                    elif event.name.lower() == 'q' or event.name == 'esc':
-                        console.print("\n[bold red]Shutting down server...[/bold red]")
-                        import os
-                        os._exit(0)
-        except ImportError:
-            # Fallback if keyboard module is not working
-            console.print("[bold yellow]Note: 'keyboard' module not available. You'll need to manually open the URL in your browser.[/bold yellow]")
-            # Start a simple input thread as fallback
-            try:
-                while True:
-                    user_input = input().strip().lower()
-                    if user_input == 'o' and not browser_opened:
-                        webbrowser.open(local_url)
-                        browser_opened = True
-                        console.print("[bold green]✓ Browser opened successfully![/bold green]")
-                        console.print("[bold yellow]Browser already opened. Press Ctrl+C to exit.[/bold yellow]")
-                    elif user_input == 'q' or user_input == 'quit':
-                        console.print("[bold red]Shutting down server...[/bold red]")
-                        break
-            except (KeyboardInterrupt, EOFError):
-                pass
-
-    # Start the keypress listener in a separate thread
-    key_thread = threading.Thread(target=check_keypress, daemon=True)
-    key_thread.start()
-
-    # Suppress Flask/Werkzeug logs for cleaner output
-    import logging
-    log = logging.getLogger('werkzeug')
-    log.setLevel(logging.ERROR)  # Suppress werkzeug logs
-
-    # Run the Flask server with minimal output
-    socketio.run(app, host='0.0.0.0', port=port, debug=False, use_reloader=False,
-                log_output=False)  # Suppress server logs
 
 if __name__ == '__main__':
     run_gui()
