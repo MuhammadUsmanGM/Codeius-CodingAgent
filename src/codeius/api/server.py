@@ -7,14 +7,20 @@ from flask_socketio import SocketIO
 from flask_cors import CORS
 from codeius.core.agent import CodingAgent
 
-# Get the directory of this file and go up to project root, then to Codeius-GUI
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(os.path.dirname(current_dir))
-codeius_gui_dir = os.path.join(project_root, 'Codeius-GUI')
+# Construct the absolute path to the dist folder directly
+import os
+# The relative path from this file to the dist folder is: ../../Codeius-GUI/dist
+current_file_dir = os.path.dirname(os.path.abspath(__file__))  # src/codeius/api/
+project_root_dir = os.path.dirname(os.path.dirname(os.path.dirname(current_file_dir)))  # project root
+dist_path = os.path.join(project_root_dir, 'Codeius-GUI', 'dist')
+
+# Verify the path exists before creating Flask app
+print(f"Looking for dist folder at: {dist_path}")
+print(f"Dist folder exists: {os.path.exists(dist_path)}")
 
 app = Flask(__name__,
-           static_folder=os.path.join(codeius_gui_dir, 'dist'),  # For production builds
-           template_folder=os.path.join(codeius_gui_dir, 'dist'))
+           static_folder=dist_path,
+           template_folder=dist_path)
 
 # Enable CORS for all routes and allow development origin
 CORS(app, resources={
@@ -32,70 +38,107 @@ agent = CodingAgent()
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve(path):
-    # Check if we're serving a built version first
-    static_path = os.path.join(app.static_folder, path)
-    if path != "" and os.path.exists(static_path):
-        return send_from_directory(app.static_folder, path)
-    else:
-        # Serve the index.html for client-side routing
-        index_path = os.path.join(app.static_folder, 'index.html')
-        if os.path.exists(index_path):
-            return send_from_directory(app.static_folder, 'index.html')
+    # Check if static folder exists (the React build)
+    if app.static_folder and os.path.exists(app.static_folder):
+        # If path is not empty, try to serve the specific file
+        if path:
+            static_path = os.path.join(app.static_folder, path)
+            if os.path.exists(static_path):
+                return send_from_directory(app.static_folder, path)
+            else:
+                # If file doesn't exist, serve index.html for client-side routing
+                return send_from_directory(app.static_folder, 'index.html')
         else:
-            # If no build exists, serve a simple error page or redirect to dev server
-            return '''
-            <h1>Codeius GUI Not Built</h1>
-            <p>Please run <code>npm run build</code> in the Codeius-GUI directory to build the React app.</p>
-            <p>Alternatively, run the development server separately with <code>npm run dev</code>.</p>
-            '''
+            # If root path, serve index.html
+            return send_from_directory(app.static_folder, 'index.html')
+
+    # If no static folder exists, return an error (this shouldn't happen if build was done)
+    return "React application not built. Run 'npm run build' in Codeius-GUI directory.", 500
 
 @app.route('/api/ask', methods=['POST'])
 def ask():
-    data = request.get_json()
-    prompt = data.get('prompt')
-    if not prompt:
-        return jsonify({'error': 'No prompt provided'}), 400
+    try:
+        data = request.get_json()
+        prompt = data.get('prompt')
+        if not prompt:
+            return jsonify({'error': 'No prompt provided'}), 400
 
-    socketio.emit('agent_thinking', {'thinking': True})
-    response = agent.ask(prompt)
-    socketio.emit('agent_thinking', {'thinking': False})
+        socketio.emit('agent_thinking', {'thinking': True})
+        response = agent.ask(prompt)
+        socketio.emit('agent_thinking', {'thinking': False})
 
-    return jsonify({'response': response})
+        return jsonify({'response': response})
+    except Exception as e:
+        print(f"Error in /api/ask endpoint: {str(e)}")
+        return jsonify({'error': 'Failed to process request', 'details': str(e)}), 500
 
 @app.route('/api/history')
 def history():
-    return jsonify({'history': agent.conversation_manager.get_conversation_context()})
+    try:
+        return jsonify({'history': agent.conversation_manager.get_conversation_context()})
+    except Exception as e:
+        print(f"Error in /api/history endpoint: {str(e)}")
+        return jsonify({'error': 'Failed to get history', 'details': str(e)}), 500
 
 @app.route('/api/models')
 def models():
     """Get available models"""
-    models = agent.get_available_models()
-    return jsonify({'models': models})
+    try:
+        models = agent.get_available_models()
+        # Convert model objects to a list of dictionaries with 'name' and 'key'
+        serializable_models = [{"name": model.name, "key": model.key} for model in models]
+        return jsonify({'models': serializable_models})
+    except Exception as e:
+        print(f"Error in /api/models endpoint: {str(e)}")
+        return jsonify({'error': 'Failed to get models', 'details': str(e)}), 500
 
 @app.route('/api/switch_model', methods=['POST'])
 def switch_model():
     """Switch to a specific model"""
-    data = request.get_json()
-    model_key = data.get('model_key')
-    if not model_key:
-        return jsonify({'error': 'No model key provided'}), 400
+    try:
+        data = request.get_json()
+        model_key = data.get('model_key')
+        if not model_key:
+            return jsonify({'error': 'No model key provided'}), 400
 
-    result = agent.switch_model(model_key)
-    return jsonify({'result': result})
+        result = agent.switch_model(model_key)
+        return jsonify({'result': result})
+    except Exception as e:
+        print(f"Error in /api/switch_model endpoint: {str(e)}")
+        return jsonify({'error': 'Failed to switch model', 'details': str(e)}), 500
 
 @app.route('/api/clear_history', methods=['POST'])
 def clear_history():
     """Clear conversation history"""
-    agent.reset_history()
-    return jsonify({'result': 'History cleared'})
+    try:
+        agent.reset_history()
+        return jsonify({'result': 'History cleared'})
+    except Exception as e:
+        print(f"Error in /api/clear_history endpoint: {str(e)}")
+        return jsonify({'error': 'Failed to clear history', 'details': str(e)}), 500
 
-def find_free_port():
-    """Find an available port to run the server on."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(('', 0))
-        s.listen(1)
-        port = s.getsockname()[1]
-    return port
+def find_free_port(start_port=8080):
+    """Find an available port to run the server on, starting with a default port."""
+    # Try the default port first
+    default_port = start_port
+    while True:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(('', default_port))
+                s.listen(1)
+                port = default_port
+                s.close()  # Close the socket after finding a free port
+                return port
+            except OSError:
+                # Port is in use, try the next one
+                default_port += 1
+                if default_port > 65535:  # Port range limit
+                    # If we've exhausted the range, go back to auto-assign
+                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                        s.bind(('', 0))
+                        s.listen(1)
+                        port = s.getsockname()[1]
+                    return port
 
 def get_network_ip():
     """Get the machine's network IP address"""
@@ -119,7 +162,7 @@ def run_gui():
     # Create a rich console for better formatting
     console = Console()
 
-    port = find_free_port()
+    port = find_free_port(8080)  # Default to port 8080, then try consecutive ports
     local_url = f"http://localhost:{port}"
     network_url = f"http://{get_network_ip()}:{port}"
 

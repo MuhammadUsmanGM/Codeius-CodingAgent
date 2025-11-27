@@ -1,53 +1,16 @@
-# Codeius GUI
+# React + Vite
 
-The frontend React application for the Codeius AI Coding Agent.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Development
+Currently, two official plugins are available:
 
-### Prerequisites
-- Node.js (v18 or higher)
-- npm or yarn
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-### Setup
-1. Install dependencies:
-```bash
-npm install
-```
+## React Compiler
 
-2. Start the development server:
-```bash
-npm run dev
-```
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-The application will start on `http://localhost:3000` and will automatically proxy API requests to the backend server.
+## Expanding the ESLint configuration
 
-### Environment Variables
-Create a `.env` file in the root of the `Codeius-GUI` directory:
-
-```
-VITE_API_URL=/api
-```
-
-## Building for Production
-To create a production build of the React app:
-
-```bash
-npm run build
-```
-
-This will create optimized build files in the `dist` directory.
-
-## Features
-- Real-time chat with the Codeius AI agent
-- Multiple AI model selection
-- Conversation history
-- Responsive design for desktop and mobile
-- Syntax highlighting for code
-- Suggested prompts for quick start
-- Settings panel for customization
-
-## Architecture
-- React 19 with hooks
-- Vite as the build tool
-- Tailwind CSS for styling (via custom CSS)
-- Proxy configuration for development
+If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.

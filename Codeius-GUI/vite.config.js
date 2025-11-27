@@ -9,15 +9,10 @@ export default defineConfig({
     open: true, // Automatically open the browser
     proxy: {
       '/api': {
-        target: 'http://localhost:5000', // Default Flask backend port
+        target: 'http://127.0.0.1:8080', // Default Flask backend port
         changeOrigin: true,
         secure: false,
       },
-    },
-  },
-  build: {
-    rollupOptions: {
-      external: ['tslib'],
     },
   },
 })
