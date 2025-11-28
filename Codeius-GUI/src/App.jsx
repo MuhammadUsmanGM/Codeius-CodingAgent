@@ -351,67 +351,159 @@ function App() {
     <div className="settings-panel" onClick={() => setShowSettings(false)}>
       <div className="settings-content" onClick={(e) => e.stopPropagation()}>
         <div className="settings-header">
-          <h3>Settings</h3>
+          <h3>⚙️ Settings</h3>
           <button className="close-settings" onClick={() => setShowSettings(false)}>✕</button>
         </div>
 
-        <div className="setting-item">
-          <label>Theme</label>
-          <select
-            value={theme}
-            onChange={(e) => switchTheme(e.target.value)}
+        <div className="settings-section">
+          <h4>Appearance</h4>
+          <div className="setting-item">
+            <label>Theme</label>
+            <div className="custom-select-container">
+              <div
+                className="custom-select-trigger"
+                onClick={() => {
+                  // Toggle the dropdown for theme
+                  const themeDropdown = document.getElementById('theme-dropdown');
+                  themeDropdown.style.display = themeDropdown.style.display === 'block' ? 'none' : 'block';
+                }}
+              >
+                {theme.charAt(0).toUpperCase() + theme.slice(1)}
+                <span className="arrow-down">▼</span>
+              </div>
+              <div id="theme-dropdown" className="custom-options" style={{ display: 'none' }}>
+                {['default', 'light', 'blue', 'green'].map(option => (
+                  <div
+                    key={option}
+                    className="custom-option"
+                    onClick={() => {
+                      switchTheme(option);
+                      document.getElementById('theme-dropdown').style.display = 'none';
+                    }}
+                  >
+                    {option.charAt(0).toUpperCase() + option.slice(1)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="setting-item">
+            <label>Font Size</label>
+            <div className="custom-select-container">
+              <div
+                className="custom-select-trigger"
+                onClick={() => {
+                  const fontSizeDropdown = document.getElementById('font-size-dropdown');
+                  fontSizeDropdown.style.display = fontSizeDropdown.style.display === 'block' ? 'none' : 'block';
+                }}
+              >
+                {userPreferences.fontSize.charAt(0).toUpperCase() + userPreferences.fontSize.slice(1)}
+                <span className="arrow-down">▼</span>
+              </div>
+              <div id="font-size-dropdown" className="custom-options" style={{ display: 'none' }}>
+                {['small', 'medium', 'large'].map(option => (
+                  <div
+                    key={option}
+                    className="custom-option"
+                    onClick={() => {
+                      updatePreferences({ fontSize: option });
+                      document.getElementById('font-size-dropdown').style.display = 'none';
+                    }}
+                  >
+                    {option.charAt(0).toUpperCase() + option.slice(1)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <h4>Behavior</h4>
+          <div className="setting-item checkbox-item">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={userPreferences.notifications}
+                onChange={(e) => updatePreferences({ notifications: e.target.checked })}
+              />
+              <span className="checkbox-custom"></span>
+              Enable Notifications
+            </label>
+          </div>
+
+          <div className="setting-item checkbox-item">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={userPreferences.autoScroll}
+                onChange={(e) => updatePreferences({ autoScroll: e.target.checked })}
+              />
+              <span className="checkbox-custom"></span>
+              Auto Scroll to Bottom
+            </label>
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <h4>Code Display</h4>
+          <div className="setting-item">
+            <label>Code Highlighting</label>
+            <div className="custom-select-container">
+              <div
+                className="custom-select-trigger"
+                onClick={() => {
+                  const codeHighlightDropdown = document.getElementById('code-highlight-dropdown');
+                  codeHighlightDropdown.style.display = codeHighlightDropdown.style.display === 'block' ? 'none' : 'block';
+                }}
+              >
+                {userPreferences.codeHighlighting.charAt(0).toUpperCase() + userPreferences.codeHighlighting.slice(1)}
+                <span className="arrow-down">▼</span>
+              </div>
+              <div id="code-highlight-dropdown" className="custom-options" style={{ display: 'none' }}>
+                {['auto', 'light', 'dark'].map(option => (
+                  <div
+                    key={option}
+                    className="custom-option"
+                    onClick={() => {
+                      updatePreferences({ codeHighlighting: option });
+                      document.getElementById('code-highlight-dropdown').style.display = 'none';
+                    }}
+                  >
+                    {option.charAt(0).toUpperCase() + option.slice(1)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="settings-actions">
+          <button
+            className="settings-btn reset-btn"
+            onClick={() => {
+              // Reset to default preferences
+              const defaultPrefs = {
+                fontSize: 'medium',
+                codeHighlighting: 'auto',
+                notifications: true,
+                autoScroll: true,
+                sidebarPosition: 'left'
+              };
+              saveUserPreferences(defaultPrefs);
+              setTheme('default');
+              localStorage.setItem('codeius-theme', 'default');
+            }}
           >
-            <option value="default">Default</option>
-            <option value="light">Light</option>
-            <option value="blue">Blue</option>
-            <option value="green">Green</option>
-          </select>
-        </div>
-
-        <div className="setting-item">
-          <label>Font Size</label>
-          <select
-            value={userPreferences.fontSize}
-            onChange={(e) => updatePreferences({ fontSize: e.target.value })}
+            Reset to Defaults
+          </button>
+          <button
+            className="settings-btn close-btn"
+            onClick={() => setShowSettings(false)}
           >
-            <option value="small">Small</option>
-            <option value="medium">Medium</option>
-            <option value="large">Large</option>
-          </select>
-        </div>
-
-        <div className="setting-item">
-          <label>Code Highlighting</label>
-          <select
-            value={userPreferences.codeHighlighting}
-            onChange={(e) => updatePreferences({ codeHighlighting: e.target.value })}
-          >
-            <option value="auto">Auto</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </select>
-        </div>
-
-        <div className="setting-item">
-          <label>
-            <input
-              type="checkbox"
-              checked={userPreferences.notifications}
-              onChange={(e) => updatePreferences({ notifications: e.target.checked })}
-            />
-            Enable Notifications
-          </label>
-        </div>
-
-        <div className="setting-item">
-          <label>
-            <input
-              type="checkbox"
-              checked={userPreferences.autoScroll}
-              onChange={(e) => updatePreferences({ autoScroll: e.target.checked })}
-            />
-            Auto Scroll to Bottom
-          </label>
+            Close
+          </button>
         </div>
       </div>
     </div>
@@ -444,11 +536,89 @@ function App() {
     <div className="history-panel" onClick={() => setShowHistory(false)}>
       <div className="history-content" onClick={(e) => e.stopPropagation()}>
         <div className="history-header">
-          <h3>Conversation History</h3>
+          <h3>📜 Conversation History</h3>
           <button className="close-history" onClick={() => setShowHistory(false)}>✕</button>
         </div>
+
+        <div className="history-filters">
+          <input
+            type="text"
+            placeholder="Search conversations..."
+            className="history-search"
+          />
+          <div className="custom-select-container">
+            <div
+              className="custom-select-trigger"
+              onClick={() => {
+                const historyFilterDropdown = document.getElementById('history-filter-dropdown');
+                historyFilterDropdown.style.display = historyFilterDropdown.style.display === 'block' ? 'none' : 'block';
+              }}
+            >
+              All Conversations
+              <span className="arrow-down">▼</span>
+            </div>
+            <div id="history-filter-dropdown" className="custom-options" style={{ display: 'none' }}>
+              {['All Conversations', 'Today', 'Past 7 days', 'Past 30 days'].map(option => (
+                <div
+                  key={option}
+                  className="custom-option"
+                  onClick={() => {
+                    // Filter functionality would go here
+                    document.getElementById('history-filter-dropdown').style.display = 'none';
+                  }}
+                >
+                  {option}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
         <div className="history-list">
-          <p>No conversation history available yet.</p>
+          {messages.length > 0 ? (
+            messages.map((message, index) => (
+              <div key={message.id} className="history-item">
+                <div className="history-message-preview">
+                  <div className="history-sender">
+                    {message.sender === 'user' ? '👤 You' : message.sender === 'ai' ? '🤖 AI' : '📢 System'}
+                  </div>
+                  <div className="history-content">
+                    {message.content.length > 100
+                      ? message.content.substring(0, 100) + '...'
+                      : message.content}
+                  </div>
+                  <div className="history-time">
+                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+              </div>
+            )).reverse() // Show latest conversations first
+          ) : (
+            <div className="no-history">
+              <div className="empty-state-icon">💬</div>
+              <h4>No Conversation History</h4>
+              <p>Start a conversation to see it appear here</p>
+            </div>
+          )}
+        </div>
+
+        <div className="history-actions">
+          <button
+            className="history-btn clear-btn"
+            onClick={() => {
+              if (window.confirm('Are you sure you want to clear all conversation history?')) {
+                setMessages([]);
+              }
+            }}
+          >
+            Clear History
+          </button>
+          <button
+            className="history-btn close-btn"
+            onClick={() => setShowHistory(false)}
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
@@ -547,17 +717,40 @@ function App() {
         <div className="sidebar-footer">
           <div className="current-model-info">
             <span className="model-label">Current Model:</span>
-            <select
-              value={currentModel}
-              onChange={(e) => runCommand(`/switch ${e.target.value}`)}
-              className="model-select-sidebar"
-            >
-              {Object.entries(availableModels).map(([key, model]) => (
-                <option key={key} value={key}>
-                  {model.name}
-                </option>
-              ))}
-            </select>
+            <div className="custom-select-container">
+              <div
+                className="custom-select-trigger"
+                style={{
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  border: '1px solid rgba(170, 255, 255, 0.3)',
+                  color: '#fff',
+                  padding: '0.6rem 1rem',
+                  fontSize: '0.9rem',
+                  minHeight: 'auto'
+                }}
+                onClick={() => {
+                  const modelDropdown = document.getElementById('model-select-dropdown');
+                  modelDropdown.style.display = modelDropdown.style.display === 'block' ? 'none' : 'block';
+                }}
+              >
+                {availableModels[currentModel]?.name || 'Select Model'}
+                <span className="arrow-down">▼</span>
+              </div>
+              <div id="model-select-dropdown" className="custom-options" style={{ display: 'none' }}>
+                {Object.entries(availableModels).map(([key, model]) => (
+                  <div
+                    key={key}
+                    className="custom-option"
+                    onClick={() => {
+                      runCommand(`/switch ${key}`);
+                      document.getElementById('model-select-dropdown').style.display = 'none';
+                    }}
+                  >
+                    {model.name}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
           <div className="sidebar-status">
             <div className="status-indicator online"></div>
@@ -569,31 +762,44 @@ function App() {
       {/* Main chat content */}
       <div className="chat-container">
         <header className="chat-header">
-          <button
-            className="menu-btn"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            ☰
-          </button>
-          <div className="chat-title">
-            <div className="logo-small" title="Codeius Logo"></div>
-            <span>Codeius AI</span>
-          </div>
-          <div className="header-actions">
-            <button
-              className="settings-btn"
-              onClick={() => setShowSettings(true)}
-              title="Settings"
-            >
-              ⚙️
-            </button>
-            <button
-              className="history-btn"
-              onClick={() => setShowHistory(true)}
-              title="History"
-            >
-              📜
-            </button>
+          <div className="navbar-container">
+            {/* Left Side - Sidebar Toggle Button */}
+            <div className="nav-item nav-left">
+              <button
+                className="menu-btn"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                aria-label="Toggle sidebar"
+              >
+                ☰
+              </button>
+            </div>
+
+            {/* Center - Logo */}
+            <div className="nav-item nav-center">
+              <img src="/Logo.png" alt="Codeius Logo" className="logo-large" title="Codeius Logo" />
+            </div>
+
+            {/* Right Side - Settings and History Buttons */}
+            <div className="nav-item nav-right">
+              <div className="header-actions">
+                <button
+                  className="history-btn"
+                  onClick={() => setShowHistory(true)}
+                  title="History"
+                  aria-label="History"
+                >
+                  📜
+                </button>
+                <button
+                  className="settings-btn"
+                  onClick={() => setShowSettings(true)}
+                  title="Settings"
+                  aria-label="Settings"
+                >
+                  ⚙️
+                </button>
+              </div>
+            </div>
           </div>
         </header>
 
@@ -611,6 +817,7 @@ function App() {
         </div>
 
         <div className="messages-container">
+          <div className="background-logo" />
           {messages.map((message) => (
             <div key={message.id} className={`message ${message.sender}`}>
               <div className="message-content">
@@ -641,25 +848,27 @@ function App() {
 
         <form id="message-form" onSubmit={handleFormSubmit} className="input-form">
           <div className="input-container">
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Ask Codeius anything about coding..."
-              className="message-input"
-              disabled={isLoading}
-              autoFocus
-            />
-            <button
-              type="submit"
-              className="send-button"
-              disabled={!inputValue.trim() || isLoading}
-            >
-              {isLoading ? 'Sending...' : '➤'}
-            </button>
-          </div>
-          <div className="input-hint">
-            <span>Tip: Use /commands to see available commands</span>
+            <div className="input-wrapper">
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="Ask Codeius anything about coding..."
+                className="message-input"
+                disabled={isLoading}
+                autoFocus
+              />
+              <button
+                type="submit"
+                className="send-button"
+                disabled={!inputValue.trim() || isLoading}
+              >
+                {isLoading ? 'Sending...' : '➤'}
+              </button>
+            </div>
+            <div className="input-hint">
+              <span>Tip: Use /commands to see available commands</span>
+            </div>
           </div>
         </form>
       </div>
