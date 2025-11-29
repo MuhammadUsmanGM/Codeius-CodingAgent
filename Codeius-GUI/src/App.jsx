@@ -1,9 +1,15 @@
 import './App.css'
+import Navbar from './components/Navbar'
+import InputField from './components/InputField'
 
 function App() {
   return (
     <div className="App">
-      {/* The background image will be set via CSS using the logo.png from public folder */}
+      <Navbar />
+      {/* The background image remains visible as the background of the App div */}
+      <div className="input-section">
+        <InputField />
+      </div>
     </div>
   )
 }
