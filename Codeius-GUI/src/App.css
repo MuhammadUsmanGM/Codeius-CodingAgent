@@ -94,6 +94,11 @@
   outline: none;
   transition: all 0.3s ease;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  resize: none !important;
+  line-height: 1.5;
+  overflow: hidden;
+  min-height: 58px; /* Only min-height, no height or max-height */
+  box-sizing: border-box; /* Add this to ensure padding is included */
 }
 
 .input-field:focus {
