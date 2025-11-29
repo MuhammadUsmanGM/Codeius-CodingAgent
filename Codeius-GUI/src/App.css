@@ -100,7 +100,14 @@
   min-height: 58px; /* Only min-height, no height or max-height */
   box-sizing: border-box; /* Add this to ensure padding is included */
 }
+.input-field::-webkit-scrollbar {
+  display: none;
+}
 
+.input-field {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
 .input-field:focus {
   box-shadow:
     0 8px 32px rgba(0, 114, 255, 0.4),
