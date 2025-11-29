@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import './InputField.css';
 
 const InputField = () => {
   const textareaRef = useRef(null);
@@ -9,10 +10,10 @@ const InputField = () => {
 
     // Reset height to auto to calculate the proper scrollHeight
     textarea.style.height = 'auto';
-    
+
     // Calculate the new height based on content
     const maxHeight = 150; // Max height for 4 lines
-    
+
     if (textarea.scrollHeight > maxHeight) {
       textarea.style.height = `${maxHeight}px`;
       textarea.style.overflowY = 'auto';

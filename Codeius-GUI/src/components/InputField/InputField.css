@@ -1,0 +1,50 @@
+.input-container {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 700px;
+  z-index: 9998;
+}
+  
+  .input-field {
+    width: 100%;
+    padding: 16px 24px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50px;
+    background: rgba(10, 25, 47, 0.6);
+    backdrop-filter: blur(12px);
+    font-size: 1rem;
+    color: #fff;
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.3),
+      inset 0 4px 12px rgba(255, 255, 255, 0.1);
+    outline: none;
+    transition: all 0.3s ease;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    resize: none !important;
+    line-height: 1.5;
+    overflow: hidden;
+    min-height: 58px; /* Only min-height, no height or max-height */
+    box-sizing: border-box; /* Add this to ensure padding is included */
+  }
+  .input-field::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .input-field {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .input-field:focus {
+    box-shadow:
+      0 8px 32px rgba(0, 114, 255, 0.4),
+      inset 0 4px 12px rgba(0, 114, 255, 0.2);
+    border-color: rgba(0, 114, 255, 0.5);
+    background: rgba(10, 25, 47, 0.8);
+  }
+  
+  .input-field::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+  }
