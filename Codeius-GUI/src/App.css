@@ -51,6 +51,11 @@ body.sidebar-open .App {
   margin-left: 300px;
 }
 
+/* Ensure no overflow when sidebar is open */
+body.sidebar-open {
+  overflow: hidden;
+}
+
 /* Remove any potential blur effects */
 .App {
   filter: none !important;
