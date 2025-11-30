@@ -37,7 +37,13 @@
 }
 
 .nav-spacer {
-  flex: 0 0 40px; /* Spacer to balance the settings button */
+  flex: 0 0 40px; /* Spacer to balance the controls section */
+}
+
+.nav-controls {
+  display: flex;
+  gap: 20px; /* 20px gap between the icons as requested */
+  align-items: center;
 }
 
 .logo-icon {

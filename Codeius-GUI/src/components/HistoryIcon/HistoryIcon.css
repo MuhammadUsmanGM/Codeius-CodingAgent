@@ -1,0 +1,37 @@
+.history-icon-btn {
+  background: rgba(0, 114, 255, 0.2) !important;
+  border: 1px solid rgba(0, 114, 255, 0.4) !important;
+  border-radius: 8px !important;
+  width: 40px !important;
+  height: 40px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.3s ease !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  color: #87ceeb !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+  position: relative !important; /* Added to ensure proper positioning */
+}
+
+.history-icon-btn:hover {
+  background: rgba(0, 114, 255, 0.3) !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 0 15px rgba(0, 114, 255, 0.5) !important;
+}
+
+.history-icon-btn:active {
+  transform: scale(0.95) !important;
+}
+
+/* Ensure the icon is visible */
+.history-icon-btn::before {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2387ceeb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'%3E%3C/circle%3E%3Cpolyline points='12 6 12 12 16 14'%3E%3C/polyline%3E%3C/svg%3E");
+  display: block;
+}

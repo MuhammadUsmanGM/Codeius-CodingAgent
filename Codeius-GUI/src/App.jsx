@@ -4,6 +4,7 @@ import Navbar from './components/Navbar/Navbar'
 import InputField from './components/InputField/InputField'
 import Sidebar from './components/Sidebar/Sidebar'
 import ChatBubble from './components/ChatBubble/ChatBubble'
+import HistoryModal from './components/HistoryModal/HistoryModal';
 
 function App() {
   const [messages, setMessages] = useState([
@@ -15,8 +16,19 @@ function App() {
     }
   ]);
 
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
+
+  // Function to open history modal
+  const openHistoryModal = () => {
+    setIsHistoryModalOpen(true);
+  };
+
+  // Function to close history modal
+  const closeHistoryModal = () => {
+    setIsHistoryModalOpen(false);
+  };
 
   // Always auto-scroll to latest message for user messages, but track for AI responses
   const shouldAutoScroll = useRef(true);
@@ -114,7 +126,7 @@ function App() {
 
   return (
     <div className="App">
-      <Navbar />
+      <Navbar onOpenHistory={openHistoryModal} />
       <Sidebar />
       {/* Chat bubbles appear on the background */}
       <div className="chat-bubbles-container" ref={chatContainerRef}>
@@ -130,6 +142,8 @@ function App() {
       </div>
       {/* The background image remains visible as the background of the App div */}
       <InputField setMessages={setMessages} messages={messages} />
+      {/* History modal */}
+      <HistoryModal isOpen={isHistoryModalOpen} onClose={closeHistoryModal} />
     </div>
   )
 }

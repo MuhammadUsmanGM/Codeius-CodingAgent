@@ -1,8 +1,9 @@
 import React from 'react';
 import Settings from '../Settings/Settings';
+import HistoryIcon from '../HistoryIcon/HistoryIcon';
 import './Navbar.css';
 
-const Navbar = () => {
+const Navbar = ({ onOpenHistory }) => {
   const handleModelChange = (modelId) => {
     console.log(`Model changed to: ${modelId}`);
     // Here you would typically update the selected model in your app state
@@ -16,7 +17,8 @@ const Navbar = () => {
           <img src="/favicon.png" alt="Codeius AI Logo" className="logo-icon" />
           <span className="logo-text">Codeius AI</span>
         </div>
-        <div className="nav-settings">
+        <div className="nav-controls"> {/* Combined controls section */}
+          <HistoryIcon onOpenHistory={onOpenHistory} />
           <Settings onModelChange={handleModelChange} currentModel="groq-llama3" />
         </div>
       </div>
