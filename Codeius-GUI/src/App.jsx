@@ -77,6 +77,41 @@ function App() {
     }
   }, []);
 
+  // Add keyboard navigation functionality
+  useEffect(() => {
+    const container = chatContainerRef.current;
+
+    const handleKeyDown = (e) => {
+      // Only respond to keys if the input field is not focused
+      if (!document.activeElement.classList.contains('input-field')) {
+        if (e.key === 'ArrowUp' && container) {
+          e.preventDefault();
+          // Scroll up by roughly 100px or to the top if near the top
+          container.scrollTop = Math.max(0, container.scrollTop - 100);
+        } else if (e.key === 'ArrowDown' && container) {
+          e.preventDefault();
+          // Scroll down by roughly 100px or to the bottom if near the bottom
+          const maxScroll = container.scrollHeight - container.clientHeight;
+          container.scrollTop = Math.min(maxScroll, container.scrollTop + 100);
+        } else if (e.key === 'Home' && container) {
+          e.preventDefault();
+          // Scroll to top
+          container.scrollTop = 0;
+        } else if (e.key === 'End' && container) {
+          e.preventDefault();
+          // Scroll to bottom
+          container.scrollTop = container.scrollHeight;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   return (
     <div className="App">
       <Navbar />
