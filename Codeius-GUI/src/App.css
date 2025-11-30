@@ -49,12 +49,18 @@ textarea:focus {
 /* Adjust main content when sidebar is open */
 body.sidebar-open .App {
   margin-left: 300px;
+  overflow: hidden; /* Prevent overflow when sidebar is open */
 }
 
 /* Adjust chat bubbles container when sidebar is open to maintain proper spacing */
 body.sidebar-open .chat-bubbles-container {
   left: 0;
   width: calc(100% - 300px); /* Shrink width to account for sidebar */
+}
+
+/* Ensure no scrollbars appear on the body when sidebar is open */
+body.sidebar-open {
+  overflow: hidden;
 }
 
 /* Remove any potential blur effects */
