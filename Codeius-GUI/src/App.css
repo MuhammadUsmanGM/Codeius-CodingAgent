@@ -12,6 +12,15 @@
   position: relative; /* Ensure proper positioning context */
 }
 
+/* Remove default focus outlines globally */
+button:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 114, 255, 0.5);
+}
+
 /* Custom text selection styles */
 ::selection {
   background:

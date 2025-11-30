@@ -5,7 +5,9 @@ const Settings = ({ onModelChange, currentModel }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [customModelName, setCustomModelName] = useState('');
   const [customModelEndpoint, setCustomModelEndpoint] = useState('');
+  const [apiKey, setApiKey] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [errors, setErrors] = useState({});
   
   // Default models
   const [models, setModels] = useState([
@@ -22,10 +24,8 @@ const Settings = ({ onModelChange, currentModel }) => {
     setIsOpen(false); // Close the dropdown after selection
   };
 
-  const handleAddCustomModel = (e) => {
-    e.preventDefault();
-    
-    if (customModelName && customModelEndpoint) {
+  const handleAddCustomModel = () => {
+    if (customModelName && customModelEndpoint && apiKey) {
       const newModel = {
         id: `custom-${Date.now()}`, // Unique ID
         name: customModelName,
@@ -33,10 +33,11 @@ const Settings = ({ onModelChange, currentModel }) => {
         endpoint: customModelEndpoint,
         default: false
       };
-      
+
       setModels([...models, newModel]);
       setCustomModelName('');
       setCustomModelEndpoint('');
+      setApiKey('');
       setShowAddForm(false);
     }
   };
@@ -83,33 +84,150 @@ const Settings = ({ onModelChange, currentModel }) => {
               </button>
               
               {showAddForm && (
-                <form className="add-model-form" onSubmit={handleAddCustomModel}>
+                <form
+                  className="add-model-form"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+
+                    // Custom validation
+                    const newErrors = {};
+
+                    if (!customModelName.trim()) {
+                      newErrors.customModelName = "Please enter a model name";
+                    }
+
+                    if (!customModelEndpoint.trim()) {
+                      newErrors.customModelEndpoint = "Please enter a model endpoint/API URL";
+                    }
+
+                    if (!apiKey.trim()) {
+                      newErrors.apiKey = "Please enter an API key";
+                    }
+
+                    setErrors(newErrors);
+
+                    // Only proceed if there are no errors
+                    if (Object.keys(newErrors).length === 0) {
+                      handleAddCustomModel();
+                    }
+                  }}
+                >
                   <input
-                    type="text"
+                    type={`text ${errors.customModelName ? 'error' : ''}`}
                     placeholder="Model name"
                     value={customModelName}
-                    onChange={(e) => setCustomModelName(e.target.value)}
-                    required
+                    onChange={(e) => {
+                      setCustomModelName(e.target.value);
+                      if (errors.customModelName) {
+                        setErrors(prev => ({...prev, customModelName: ''}));
+                      }
+                    }}
                   />
+                  {errors.customModelName && <div className="error-message">{errors.customModelName}</div>}
+
                   <input
-                    type="text"
+                    type={`text ${errors.customModelEndpoint ? 'error' : ''}`}
                     placeholder="Model endpoint/API URL"
                     value={customModelEndpoint}
-                    onChange={(e) => setCustomModelEndpoint(e.target.value)}
-                    required
+                    onChange={(e) => {
+                      setCustomModelEndpoint(e.target.value);
+                      if (errors.customModelEndpoint) {
+                        setErrors(prev => ({...prev, customModelEndpoint: ''}));
+                      }
+                    }}
                   />
+                  {errors.customModelEndpoint && <div className="error-message">{errors.customModelEndpoint}</div>}
+
+                  <input
+                    type={`password ${errors.apiKey ? 'error' : ''}`}
+                    placeholder="API key for custom model"
+                    value={apiKey}
+                    onChange={(e) => {
+                      setApiKey(e.target.value);
+                      if (errors.apiKey) {
+                        setErrors(prev => ({...prev, apiKey: ''}));
+                      }
+                    }}
+                  />
+                  {errors.apiKey && <div className="error-message">{errors.apiKey}</div>}
                   <div className="form-actions">
                     <button type="submit" className="save-btn">Add Model</button>
                     <button
                       type="button"
                       className="cancel-btn"
-                      onClick={() => setShowAddForm(false)}
+                      onClick={() => {
+                        setShowAddForm(false);
+                        // Reset form fields when cancelled
+                        setCustomModelName('');
+                        setCustomModelEndpoint('');
+                        setApiKey('');
+                      }}
                     >
                       Cancel
                     </button>
                   </div>
                 </form>
               )}
+            </div>
+
+            <div className="notification-section">
+              <h4>Notification Settings</h4>
+              <div className="setting-item">
+                <span>Enable notifications</span>
+                <label className="switch">
+                  <input type="checkbox" />
+                  <span className="slider"></span>
+                </label>
+              </div>
+              <div className="setting-item">
+                <span>Model change alerts</span>
+                <label className="switch">
+                  <input type="checkbox" defaultChecked />
+                  <span className="slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div className="privacy-section">
+              <h4>Data Privacy</h4>
+              <div className="setting-item">
+                <span>Share usage data</span>
+                <label className="switch">
+                  <input type="checkbox" />
+                  <span className="slider"></span>
+                </label>
+              </div>
+              <div className="setting-item">
+                <span>Remember chat history</span>
+                <label className="switch">
+                  <input type="checkbox" defaultChecked />
+                  <span className="slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div className="advanced-section">
+              <h4>Advanced Model Config</h4>
+              <div className="setting-item">
+                <span>Temperature</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  defaultValue="0.7"
+                  className="slider-input"
+                />
+              </div>
+              <div className="setting-item">
+                <span>Max Tokens</span>
+                <select className="config-selector">
+                  <option value="1024">1024</option>
+                  <option value="2048" selected>2048</option>
+                  <option value="4096">4096</option>
+                  <option value="8192">8192</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
