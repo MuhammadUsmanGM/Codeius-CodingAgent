@@ -18,21 +18,40 @@ function App() {
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
 
-  // Scroll to bottom when messages change, but only if user hasn't scrolled up
+  // Always auto-scroll to latest message for user messages, but track for AI responses
   const shouldAutoScroll = useRef(true);
+  const latestUserMessageId = useRef(null);
 
   useEffect(() => {
     const container = chatContainerRef.current;
     if (container) {
-      // Check if user is near the bottom (within 100px of the bottom)
-      const isNearBottom = container.scrollHeight - container.clientHeight - container.scrollTop < 100;
+      // Check if the latest message is from the user (they want to see their message)
+      const latestMessage = messages[messages.length - 1];
 
-      // Update ref to track if we should auto-scroll
-      shouldAutoScroll.current = isNearBottom;
+      // If the latest message is from the user or it's the initial AI welcome message,
+      // always scroll to bottom
+      const isUserMessage = latestMessage?.sender === 'user';
+      const isInitialMessage = messages.length === 1; // Welcome message
 
-      if (shouldAutoScroll.current) {
-        // Scroll to bottom smoothly
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      if (isUserMessage || isInitialMessage) {
+        // Always scroll to bottom for user messages and initial messages
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+          // Update the latest user message ID
+          if (isUserMessage) {
+            latestUserMessageId.current = latestMessage.id;
+          }
+        }, 10); // Small delay to ensure DOM has updated
+      } else {
+        // For AI messages, check if user was near bottom before
+        const isNearBottom = container.scrollHeight - container.clientHeight - container.scrollTop < 100;
+
+        if (isNearBottom) {
+          // Scroll to bottom if user was already near bottom
+          setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+          }, 10);
+        }
       }
     }
   }, [messages]);
@@ -51,13 +70,11 @@ function App() {
 
     if (container) {
       container.addEventListener('scroll', handleScroll);
-    }
-
-    return () => {
-      if (container) {
+      // Cleanup listener on unmount
+      return () => {
         container.removeEventListener('scroll', handleScroll);
-      }
-    };
+      };
+    }
   }, []);
 
   return (
