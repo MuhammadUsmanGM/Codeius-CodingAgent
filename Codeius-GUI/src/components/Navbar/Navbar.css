@@ -68,3 +68,42 @@
     background-position: -200% center;
   }
 }
+
+/* Responsive: adjust navbar on smaller screens */
+@media (max-width: 480px) {
+  .navbar {
+    height: 60px; /* Smaller navbar on extra small screens */
+  }
+
+  .logo-icon {
+    height: 30px;
+    width: 30px;
+  }
+
+  .logo-text {
+    font-size: 1.3rem; /* Smaller text on small screens */
+  }
+
+  .nav-content {
+    padding: 0 15px; /* Less padding on small screens */
+  }
+
+  .nav-spacer {
+    flex: 0 0 30px; /* Smaller spacer */
+  }
+}
+
+/* Small screen landscape */
+@media (min-width: 481px) and (max-width: 768px) {
+  .navbar {
+    height: 65px; /* Slightly smaller navbar */
+  }
+
+  .logo-text {
+    font-size: 1.4rem; /* Slightly smaller text */
+  }
+
+  .nav-spacer {
+    flex: 0 0 35px; /* Adjust spacer size */
+  }
+}

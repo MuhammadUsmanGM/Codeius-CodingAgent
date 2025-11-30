@@ -7,6 +7,8 @@
   max-width: 700px;
   z-index: 9998;
   transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  /* Ensure it doesn't overflow on small screens */
+  min-width: 280px;
 }
 
 /* Adjust input field position when sidebar is open */
@@ -14,7 +16,29 @@ body.sidebar-open .input-container {
   transform: translateX(calc(-50% + 150px)); /* Move input field to the right by half of the sidebar width */
 }
 
-/* Responsive: don't adjust on smaller screens where sidebar covers the whole width */
+/* Extra small screens */
+@media (max-width: 480px) {
+  .input-container {
+    width: 95%;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  body.sidebar-open .input-container {
+    transform: translateX(-50%); /* On mobile, don't adjust position */
+  }
+}
+
+/* Small screens (phones in landscape) */
+@media (min-width: 481px) and (max-width: 768px) {
+  .input-container {
+    width: 90%;
+    max-width: 600px;
+  }
+}
+
+/* Responsive: handle sidebar effect on smaller screens */
 @media (max-width: 768px) {
   body.sidebar-open .input-container {
     transform: translateX(-50%);

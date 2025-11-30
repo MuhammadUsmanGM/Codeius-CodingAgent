@@ -117,3 +117,53 @@
   color: #4fc3f7;
   border: 1px solid rgba(100, 150, 255, 0.3);
 }
+
+/* Responsive: adjust bubbles on smaller screens */
+@media (max-width: 480px) {
+  .chat-bubble {
+    max-width: 85%; /* Wider bubbles on small screens */
+    margin-bottom: 12px;
+  }
+  
+  .user-bubble {
+    margin-right: 10px; /* Less margin for small screens */
+    max-width: 80%;
+  }
+  
+  .ai-bubble {
+    margin-left: 10px; /* Less margin for small screens */
+    max-width: 80%;
+  }
+  
+  .bubble-text {
+    padding: 12px 16px; /* Adjust padding for small screens */
+    font-size: 0.9rem; /* Slightly smaller text */
+  }
+  
+  .bubble-timestamp {
+    font-size: 0.6rem; /* Smaller timestamp on small screens */
+  }
+
+  .code-block {
+    padding: 10px; /* Less padding for small screens */
+    font-size: 0.8rem; /* Slightly smaller code text */
+  }
+}
+
+/* Small screens landscape */
+@media (min-width: 481px) and (max-width: 768px) {
+  .chat-bubble {
+    max-width: 75%;
+  }
+  
+  .bubble-text {
+    font-size: 0.95rem; /* Slightly smaller text */
+  }
+}
+
+/* Large screens */
+@media (min-width: 1025px) {
+  .chat-bubble {
+    max-width: 70%; /* Slightly narrower on large screens for better readability */
+  }
+}

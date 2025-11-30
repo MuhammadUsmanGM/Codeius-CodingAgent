@@ -145,3 +145,156 @@ body.sidebar-open {
     padding: 15px 10px 60px 10px; /* Ensure padding on both sides */
   }
 }
+
+/* Extra small screens (phones in portrait) */
+@media (max-width: 480px) {
+  .App {
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .navbar {
+    height: 60px; /* Slightly smaller navbar */
+  }
+
+  .nav-content {
+    padding: 0 15px;
+  }
+
+  .logo-text {
+    font-size: 1.3rem; /* Smaller logo text */
+  }
+
+  .logo-icon {
+    height: 30px;
+    width: 30px;
+  }
+
+  .chat-bubbles-container {
+    top: 60px; /* Adjust for smaller navbar */
+    height: calc(100vh - 130px); /* Account for smaller navbar and input */
+    padding: 15px 10px 70px 10px;
+    height: 250px; /* Smaller fixed height on very small screens */
+  }
+
+  .input-container {
+    width: 95%; /* Wider on small screens */
+    bottom: 15px; /* Less bottom margin */
+  }
+
+  .input-field {
+    padding: 12px 16px; /* Smaller padding */
+    font-size: 0.9rem; /* Smaller text */
+  }
+
+  .sidebar {
+    width: 230px; /* Narrower sidebar */
+    left: -230px;
+    margin-top: 60px; /* Account for smaller navbar */
+    height: calc(100vh - 60px);
+  }
+
+  .sidebar-header {
+    padding: 15px 20px 15px 15px; /* Compact header */
+  }
+
+  .sidebar-logo {
+    height: 50px;
+    width: 50px;
+  }
+
+  .sidebar-title {
+    font-size: 1rem; /* Smaller title */
+  }
+
+  .command-item {
+    padding: 12px; /* Compact commands */
+    min-height: auto; /* Allow natural height */
+  }
+
+  .command-cmd {
+    font-size: 0.85rem; /* Smaller command text */
+  }
+
+  .command-desc {
+    font-size: 0.75rem; /* Smaller description text */
+  }
+
+  .sidebar-edge-trigger {
+    width: 30px;
+    height: 70px;
+  }
+
+  .trigger-line {
+    width: 16px; /* Narrower lines */
+  }
+}
+
+/* Small screens (phones in landscape) */
+@media (min-width: 481px) and (max-width: 768px) {
+  .chat-bubbles-container {
+    height: 280px;
+  }
+
+  .navbar {
+    height: 65px;
+  }
+
+  .logo-text {
+    font-size: 1.4rem;
+  }
+}
+
+/* Medium screens (tablets, small laptops) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .chat-bubbles-container {
+    height: 320px; /* Slightly taller on medium screens */
+  }
+
+  .command-item {
+    min-height: 90px; /* Taller command items */
+  }
+}
+
+/* Large screens (desktops) */
+@media (min-width: 1025px) and (max-width: 1440px) {
+  .chat-bubbles-container {
+    height: 350px; /* Taller on large screens */
+  }
+
+  .command-item {
+    min-height: 95px; /* Taller command items */
+  }
+}
+
+/* Extra large screens (large desktops) */
+@media (min-width: 1441px) {
+  .chat-bubbles-container {
+    height: 400px; /* Tallest on extra large screens */
+  }
+
+  .command-item {
+    min-height: 100px; /* Tallest command items */
+  }
+}
+
+/* Very tall screens */
+@media (min-height: 900px) {
+  .chat-bubbles-container {
+    height: 380px; /* Increase height on tall screens */
+  }
+}
+
+/* Portrait orientation */
+@media (orientation: portrait) {
+  .chat-bubbles-container {
+    height: 250px; /* Generally shorter in portrait */
+  }
+}
+
+/* Landscape orientation */
+@media (orientation: landscape) and (max-height: 600px) {
+  .chat-bubbles-container {
+    height: 200px; /* Even shorter in landscape on small devices */
+  }
+}
