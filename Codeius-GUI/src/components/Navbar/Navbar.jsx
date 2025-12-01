@@ -3,12 +3,7 @@ import Settings from '../Settings/Settings';
 import HistoryIcon from '../HistoryIcon/HistoryIcon';
 import './Navbar.css';
 
-const Navbar = ({ onOpenHistory }) => {
-  const handleModelChange = (modelId) => {
-    console.log(`Model changed to: ${modelId}`);
-    // Here you would typically update the selected model in your app state
-  };
-
+const Navbar = ({ onOpenHistory, onModelChange, currentModel }) => {
   return (
     <nav className="navbar">
       <div className="nav-content">
@@ -19,7 +14,7 @@ const Navbar = ({ onOpenHistory }) => {
         </div>
         <div className="nav-controls"> {/* Combined controls section */}
           <HistoryIcon onOpenHistory={onOpenHistory} />
-          <Settings onModelChange={handleModelChange} currentModel="groq-llama3" />
+          <Settings onModelChange={onModelChange} currentModel={currentModel} />
         </div>
       </div>
     </nav>

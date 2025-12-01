@@ -294,6 +294,17 @@ input:checked + .slider:before {
   margin-bottom: 20px;
 }
 
+.loading-models {
+  padding: 15px;
+  text-align: center;
+  color: #aaa;
+  font-style: italic;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .model-option {
   display: flex;
   justify-content: space-between;

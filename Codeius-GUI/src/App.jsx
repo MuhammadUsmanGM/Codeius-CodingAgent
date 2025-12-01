@@ -13,6 +13,7 @@ import './App.css'
 function AppContent() {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
+  const [currentModel, setCurrentModel] = useState(''); // Track current model
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -106,6 +107,11 @@ function AppContent() {
         inputField.selectionEnd = inputField.value.length;
       }
     }, 100);
+  };
+
+  const handleModelChange = (modelId) => {
+    setCurrentModel(modelId);
+    toast.success(`Model changed to: ${modelId}`);
   };
 
   const handleDeleteMessageConfirm = () => {
@@ -244,7 +250,11 @@ function AppContent() {
 
   return (
     <div className="App">
-      <Navbar onOpenHistory={openHistoryModal} />
+      <Navbar
+        onOpenHistory={openHistoryModal}
+        onModelChange={handleModelChange}
+        currentModel={currentModel}
+      />
       <Sidebar />
       {/* Chat bubbles appear on the background */}
       <div className="chat-bubbles-container" ref={chatContainerRef}>

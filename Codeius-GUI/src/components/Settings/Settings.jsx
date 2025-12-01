@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getModels, switchModel } from '../../services/api';
+import { useToast } from '../Toast/ToastContainer';
 import './Settings.css';
 
 const Settings = ({ onModelChange, currentModel }) => {
@@ -8,33 +10,74 @@ const Settings = ({ onModelChange, currentModel }) => {
   const [apiKey, setApiKey] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [errors, setErrors] = useState({});
-  
-  // Default models
-  const [models, setModels] = useState([
-    { id: 'groq-llama3', name: 'Groq - Llama 3', provider: 'Groq', default: true },
-    { id: 'google-gemini', name: 'Google - Gemini', provider: 'Google', default: true }
-  ]);
+  const [models, setModels] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const toast = useToast();
+
+  useEffect(() => {
+    if (isOpen) {
+      loadModels();
+    }
+  }, [isOpen]);
+
+  const loadModels = async () => {
+    try {
+      setLoading(true);
+      const modelList = await getModels();
+
+      // If the API returns models, use those
+      if (modelList && Object.keys(modelList).length > 0) {
+        const formattedModels = Object.entries(modelList).map(([key, model]) => ({
+          id: key,
+          name: model.name,
+          provider: model.provider,
+          description: model.description
+        }));
+        setModels(formattedModels);
+      } else {
+        // Fallback to default models if API returns empty
+        const defaultModels = [
+          { id: 'groq-llama3', name: 'Groq - Llama 3', provider: 'Groq' },
+          { id: 'google-gemini', name: 'Google - Gemini', provider: 'Google' }
+        ];
+        setModels(defaultModels);
+      }
+    } catch (error) {
+      // On error, show default models
+      const defaultModels = [
+        { id: 'groq-llama3', name: 'Groq - Llama 3', provider: 'Groq' },
+        { id: 'google-gemini', name: 'Google - Gemini', provider: 'Google' }
+      ];
+      setModels(defaultModels);
+      toast.error('Failed to load models from server, showing defaults: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleSettings = () => {
     setIsOpen(!isOpen);
   };
 
-  const handleModelSelect = (modelId) => {
-    onModelChange(modelId);
-    setIsOpen(false); // Close the dropdown after selection
+  const handleModelSelect = async (modelId) => {
+    try {
+      const result = await switchModel(modelId);
+      toast.success(result); // Show the result message from backend
+      setIsOpen(false); // Close the dropdown after selection
+      onModelChange(modelId);
+    } catch (error) {
+      toast.error('Failed to switch model: ' + error.message);
+    }
   };
 
   const handleAddCustomModel = () => {
     if (customModelName && customModelEndpoint && apiKey) {
-      const newModel = {
-        id: `custom-${Date.now()}`, // Unique ID
-        name: customModelName,
-        provider: 'Custom',
-        endpoint: customModelEndpoint,
-        default: false
-      };
+      // In the current implementation, custom models are managed by the backend
+      // This form is just for UI demonstration - in a real implementation,
+      // you would call an API endpoint to add custom models
+      toast.info('Custom model configuration would be sent to backend in a full implementation');
 
-      setModels([...models, newModel]);
+      // Reset form
       setCustomModelName('');
       setCustomModelEndpoint('');
       setApiKey('');
@@ -57,32 +100,40 @@ const Settings = ({ onModelChange, currentModel }) => {
           <div className="settings-content">
             <div className="model-section">
               <h4>Model Selection</h4>
-              
-              <div className="model-list">
-                {models.map((model) => (
-                  <div 
-                    key={model.id} 
-                    className={`model-option ${currentModel === model.id ? 'selected' : ''}`}
-                    onClick={() => handleModelSelect(model.id)}
-                  >
-                    <div className="model-info">
-                      <span className="model-name">{model.name}</span>
-                      <span className="model-provider">{model.provider}</span>
-                    </div>
-                    <div className="model-status">
-                      {currentModel === model.id && <span className="current">Current</span>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              <button 
+
+              {loading ? (
+                <div className="loading-models">Loading models...</div>
+              ) : (
+                <div className="model-list">
+                  {models.length > 0 ? (
+                    models.map((model) => (
+                      <div
+                        key={model.id}
+                        className={`model-option ${currentModel === model.id ? 'selected' : ''}`}
+                        onClick={() => handleModelSelect(model.id)}
+                      >
+                        <div className="model-info">
+                          <span className="model-name">{model.name}</span>
+                          <span className="model-provider">{model.provider}</span>
+                        </div>
+                        <div className="model-status">
+                          {currentModel === model.id && <span className="current">Current</span>}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="loading-models">No models available</div>
+                  )}
+                </div>
+              )}
+
+              <button
                 className="add-model-btn"
                 onClick={() => setShowAddForm(!showAddForm)}
               >
                 + Add Custom Model
               </button>
-              
+
               {showAddForm && (
                 <form
                   className="add-model-form"
@@ -175,7 +226,7 @@ const Settings = ({ onModelChange, currentModel }) => {
               <div className="setting-item">
                 <span>Enable notifications</span>
                 <label className="switch">
-                  <input type="checkbox" />
+                  <input type="checkbox" defaultChecked />
                   <span className="slider"></span>
                 </label>
               </div>
