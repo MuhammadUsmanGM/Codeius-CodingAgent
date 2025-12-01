@@ -1,17 +1,32 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, forwardRef } from 'react';
 import { sendMessage, getCwd, executeShellCommand, getModels, switchModel, clearHistory } from '../../services/api';
 import CommandAutocomplete from '../CommandAutocomplete/CommandAutocomplete';
 import { COMMANDS } from '../../utils/commands';
 import './InputField.css';
 
-const InputField = ({ setMessages, messages }) => {
-  const [inputValue, setInputValue] = useState('');
+const InputField = forwardRef(({ setMessages, messages, inputValue, setInputValue }, ref) => {
   const [isShellMode, setIsShellMode] = useState(false);
   const [cwd, setCwd] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
-  const [charCount, setCharCount] = useState(0);
+  const [charCount, setCharCount] = useState(inputValue?.length || 0);
   const textareaRef = useRef(null);
+
+  // Use the forwarded ref to access the textarea
+  useEffect(() => {
+    if (ref) {
+      if (typeof ref === 'function') {
+        ref(textareaRef.current);
+      } else {
+        ref.current = textareaRef.current;
+      }
+    }
+  }, [ref]);
+
+  // Update local state when parent state changes
+  useEffect(() => {
+    setCharCount(inputValue?.length || 0);
+  }, [inputValue]);
 
   const handleInput = (e) => {
     const textarea = textareaRef.current;
@@ -49,7 +64,7 @@ const InputField = ({ setMessages, messages }) => {
 
     setIsSending(true);
     const currentInput = inputValue; // Capture input
-    setInputValue(''); // Clear immediately
+    setInputValue(''); // Clear immediately using parent state
 
     // Handle Slash Commands
     if (currentInput.startsWith('/')) {
@@ -332,6 +347,6 @@ const InputField = ({ setMessages, messages }) => {
       </div>
     </div>
   );
-};
+});
 
 export default InputField;

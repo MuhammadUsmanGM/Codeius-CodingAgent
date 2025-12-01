@@ -5,14 +5,17 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
 import TypingIndicator from '../TypingIndicator/TypingIndicator';
 import MessageActions from '../MessageActions/MessageActions';
+import { useToast } from '../Toast/ToastContainer';
 import './ChatBubble.css';
 
-const ChatBubble = ({ text, sender, timestamp, isLoading, message, onCopy, onRegenerate, onDelete }) => {
+const ChatBubble = ({ text, sender, timestamp, isLoading, message, onCopy, onRegenerate, onDelete, onEdit }) => {
   const [copiedCode, setCopiedCode] = useState(null);
+  const toast = useToast();
 
   const copyToClipboard = (code, index) => {
     navigator.clipboard.writeText(code);
     setCopiedCode(index);
+    toast.success('Code copied to clipboard!');
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
@@ -110,6 +113,7 @@ const ChatBubble = ({ text, sender, timestamp, isLoading, message, onCopy, onReg
           onCopy={onCopy}
           onRegenerate={onRegenerate}
           onDelete={onDelete}
+          onEdit={onEdit}
         />
       )}
     </div>

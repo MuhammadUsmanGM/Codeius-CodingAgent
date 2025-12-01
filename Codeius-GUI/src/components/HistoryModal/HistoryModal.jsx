@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { getSessions, getSessionMessages, deleteSession, createNewSession, setCurrentSessionId, getCurrentSessionId } from '../../utils/localStorage';
+import { getSessions, deleteSession, createNewSession, setCurrentSessionId, getCurrentSessionId } from '../../utils/localStorage';
+import { useToast } from '../Toast/ToastContainer';
+import ConfirmationDialog from '../ConfirmationDialog/ConfirmationDialog';
 import './HistoryModal.css';
 
 const HistoryModal = ({ isOpen, onClose }) => {
   const [sessions, setSessions] = useState([]);
   const [currentSessionId, setSessionId] = useState(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [sessionToDelete, setSessionToDelete] = useState(null);
+  const toast = useToast();
 
   // Load sessions when modal opens
   useEffect(() => {
@@ -19,17 +24,26 @@ const HistoryModal = ({ isOpen, onClose }) => {
     window.location.reload(); // Reload to load the selected session
   };
 
-  const handleDeleteSession = (e, sessionId) => {
-    e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this chat?')) {
-      deleteSession(sessionId);
+  const handleDeleteSessionConfirm = () => {
+    if (sessionToDelete) {
+      deleteSession(sessionToDelete);
       setSessions(getSessions()); // Refresh list
-      
+      toast.success('Chat deleted successfully!');
+
       // If deleted current session, reload to create a new one
-      if (sessionId === currentSessionId) {
+      if (sessionToDelete === currentSessionId) {
         window.location.reload();
       }
+
+      setShowConfirmDialog(false);
+      setSessionToDelete(null);
     }
+  };
+
+  const handleDeleteSession = (e, sessionId) => {
+    e.stopPropagation();
+    setSessionToDelete(sessionId);
+    setShowConfirmDialog(true);
   };
 
   const handleNewChat = () => {
@@ -48,13 +62,13 @@ const HistoryModal = ({ isOpen, onClose }) => {
             + New Chat
           </button>
         </div>
-        
+
         <div className="history-modal-content">
           {sessions.length > 0 ? (
             <div className="history-list">
               {sessions.map((session) => (
-                <div 
-                  key={session.id} 
+                <div
+                  key={session.id}
                   className={`history-item session-item ${session.id === currentSessionId ? 'active' : ''}`}
                   onClick={() => handleSessionClick(session.id)}
                 >
@@ -66,7 +80,7 @@ const HistoryModal = ({ isOpen, onClose }) => {
                       <span className="session-count">{session.messageCount} msgs</span>
                     </div>
                   </div>
-                  <button 
+                  <button
                     className="delete-session-btn"
                     onClick={(e) => handleDeleteSession(e, session.id)}
                     title="Delete chat"
@@ -85,13 +99,24 @@ const HistoryModal = ({ isOpen, onClose }) => {
             </div>
           )}
         </div>
-        
+
         <div className="history-modal-footer">
           <button className="close-history-btn" onClick={onClose}>
             Close
           </button>
         </div>
       </div>
+      {/* Confirmation dialog for delete actions */}
+      <ConfirmationDialog
+        isOpen={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        onConfirm={handleDeleteSessionConfirm}
+        title="Delete Chat"
+        message="Are you sure you want to delete this chat? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="danger"
+      />
     </div>
   );
 };
