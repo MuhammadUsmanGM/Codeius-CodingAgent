@@ -2,10 +2,18 @@
 
 import os
 import socket
-from flask import Flask, send_from_directory, request, jsonify
+import time
+import subprocess
+from flask import Flask, send_from_directory, request, jsonify, session
 from flask_socketio import SocketIO
 from flask_cors import CORS
 from codeius.core.agent import CodingAgent
+from codeius.core.conversation_db import conversation_db
+from codeius.core.context_manager_enhanced import context_manager
+from codeius.core.project_scanner import project_scanner
+
+# Initialize agent
+agent = CodingAgent()
 
 # Get the directory of this file and go up to project root, then to Codeius-GUI
 import os
@@ -51,6 +59,10 @@ else:
     final_dist_path = None
     # If no production build, create app without static folder
     app = Flask(__name__)
+
+# Configure secret key for sessions (needed for file upload context)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+app.config['SESSION_TYPE'] = 'filesystem'
 
 
 CORS(app, resources={
@@ -166,15 +178,65 @@ def ask():
     try:
         data = request.get_json()
         prompt = data.get('prompt')
+        session_id = data.get('session_id', 'default')
         
         if not prompt:
             return jsonify({'error': 'No prompt provided'}), 400
+
+        # Get conversation history for context
+        history = conversation_db.get_conversation_history(session_id)
+        
+        # Select relevant context (last 5 messages or relevant ones)
+        if len(history) > 5:
+            relevant_history = context_manager.select_relevant_context(prompt, history, max_tokens=1500)
+        else:
+            relevant_history = history
+        
+        # Build context from history
+        context_messages = ""
+        for msg in relevant_history[-5:]:  # Last 5 relevant messages
+            context_messages += f"User: {msg['user']}\nAssistant: {msg['ai']}\n\n"
+
+        # Include file context if available
+        full_prompt = prompt
+        if 'file_context' in session and session['file_context']:
+            context_header = "\n\n=== Uploaded Files Context ===\n"
+            for file_info in session['file_context']:
+                context_header += f"\n--- File: {file_info['name']} ({file_info['size']} bytes) ---\n"
+                context_header += file_info['content'][:5000]  # Limit to first 5000 chars per file
+                if len(file_info['content']) > 5000:
+                    context_header += "\n... (file truncated) ..."
+                context_header += "\n"
+            
+            full_prompt = context_header + "\n\n"
+        else:
+            full_prompt = ""
+        
+        # Add conversation history
+        if context_messages:
+            full_prompt += f"=== Recent Conversation ===\n{context_messages}\n"
+        
+        # Add current question
+        full_prompt += f"=== Current Question ===\n{prompt}"
 
         # Show thinking indicator via socket
         socketio.emit('agent_thinking', {'thinking': True})
         
         # Get response from agent
-        response = agent.ask(prompt)
+        response = agent.ask(full_prompt)
+        
+        # Save conversation to database
+        token_count = context_manager.count_tokens(prompt + response)
+        model_info = agent.get_current_model_info()
+        model_used = model_info['name'] if model_info else 'default'
+        
+        conversation_db.save_conversation(
+            session_id=session_id,
+            user_message=prompt,
+            ai_response=response,
+            token_count=token_count,
+            model_used=model_used
+        )
         
         # Hide thinking indicator
         socketio.emit('agent_thinking', {'thinking': False})
@@ -184,6 +246,91 @@ def ask():
         print(f"Error in /api/ask endpoint: {str(e)}")
         socketio.emit('agent_thinking', {'thinking': False})
         return jsonify({'error': 'Failed to process request', 'details': str(e)}), 500
+
+@socketio.on('start_stream')
+def handle_start_stream(data):
+    """Handle streaming request via WebSocket"""
+    try:
+        prompt = data.get('prompt')
+        session_id = data.get('session_id', 'default')
+        
+        if not prompt:
+            socketio.emit('stream_error', {'error': 'No prompt provided', 'session_id': session_id})
+            return
+        
+        # Get conversation history for context
+        history = conversation_db.get_conversation_history(session_id)
+        
+        # Select relevant context
+        if len(history) > 5:
+            relevant_history = context_manager.select_relevant_context(prompt, history, max_tokens=1500)
+        else:
+            relevant_history = history
+        
+        # Build context from history
+        context_messages = ""
+        for msg in relevant_history[-5:]:
+            context_messages += f"User: {msg['user']}\nAssistant: {msg['ai']}\n\n"
+        
+        # Include file context
+        full_prompt = ""
+        if 'file_context' in session and session['file_context']:
+            context_header = "\n\n=== Uploaded Files Context ===\n"
+            for file_info in session['file_context']:
+                context_header += f"\n--- File: {file_info['name']} ({file_info['size']} bytes) ---\n"
+                context_header += file_info['content'][:5000]
+                if len(file_info['content']) > 5000:
+                    context_header += "\n... (file truncated) ..."
+                context_header += "\n"
+            full_prompt = context_header + "\n\n"
+        
+        # Add conversation history
+        if context_messages:
+            full_prompt += f"=== Recent Conversation ===\n{context_messages}\n"
+        
+        # Add current question
+        full_prompt += f"=== Current Question ===\n{prompt}"
+        
+        # Emit stream start
+        socketio.emit('stream_start', {'session_id': session_id})
+        
+        # Stream tokens
+        full_response = ""
+        try:
+            for token in agent.ask_stream(full_prompt):
+                full_response += token
+                socketio.emit('stream_token', {'token': token, 'session_id': session_id})
+                socketio.sleep(0)  # Allow other events to process
+        except Exception as e:
+            socketio.emit('stream_error', {'error': str(e), 'session_id': session_id})
+            return
+        
+        # Save conversation to database
+        token_count = context_manager.count_tokens(prompt + full_response)
+        model_info = agent.get_current_model_info()
+        model_used = model_info['name'] if model_info else 'default'
+        
+        conversation_db.save_conversation(
+            session_id=session_id,
+            user_message=prompt,
+            ai_response=full_response,
+            token_count=token_count,
+            model_used=model_used
+        )
+        
+        # Emit stream end
+        socketio.emit('stream_end', {'session_id': session_id})
+        
+    except Exception as e:
+        print(f"Error in start_stream handler: {str(e)}")
+        socketio.emit('stream_error', {'error': str(e), 'session_id': session_id})
+
+@socketio.on('cancel_stream')
+def handle_cancel_stream(data):
+    """Handle stream cancellation"""
+    session_id = data.get('session_id', 'default')
+    # Emit cancellation confirmation
+    socketio.emit('stream_cancelled', {'session_id': session_id})
 
 @app.route('/api/switch_model', methods=['POST'])
 def switch_model():

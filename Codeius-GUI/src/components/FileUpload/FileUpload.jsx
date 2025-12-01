@@ -1,9 +1,11 @@
 import React, { useState, useRef } from 'react';
+import { uploadFile, deleteUploadedFile } from '../../services/api';
 import './FileUpload.css';
 
 const FileUpload = ({ onFileSelect, onFilesChange }) => {
   const [files, setFiles] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleDragEnter = (e) => {
@@ -23,33 +25,65 @@ const FileUpload = ({ onFileSelect, onFilesChange }) => {
     e.stopPropagation();
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
 
     const droppedFiles = Array.from(e.dataTransfer.files);
-    addFiles(droppedFiles);
+    await handleFiles(droppedFiles);
   };
 
-  const handleFileInput = (e) => {
+  const handleFileInput = async (e) => {
     const selectedFiles = Array.from(e.target.files);
-    addFiles(selectedFiles);
+    await handleFiles(selectedFiles);
   };
 
-  const addFiles = (newFiles) => {
-    const updatedFiles = [...files, ...newFiles];
-    setFiles(updatedFiles);
-    if (onFilesChange) {
-      onFilesChange(updatedFiles);
+  const handleFiles = async (newFiles) => {
+    setUploading(true);
+    const successfullyUploaded = [];
+
+    for (const file of newFiles) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const result = await uploadFile(formData);
+        
+        successfullyUploaded.push({
+          id: Date.now() + Math.random(),
+          name: file.name,
+          size: file.size,
+          type: result.type || 'unknown'
+        });
+      } catch (error) {
+        console.error(`Failed to upload ${file.name}:`, error);
+        alert(`Failed to upload ${file.name}: ${error.message}`);
+      }
     }
+
+    if (successfullyUploaded.length > 0) {
+      const updatedFiles = [...files, ...successfullyUploaded];
+      setFiles(updatedFiles);
+      if (onFilesChange) {
+        onFilesChange(updatedFiles);
+      }
+    }
+
+    setUploading(false);
   };
 
-  const removeFile = (index) => {
-    const updatedFiles = files.filter((_, i) => i !== index);
-    setFiles(updatedFiles);
-    if (onFilesChange) {
-      onFilesChange(updatedFiles);
+  const removeFile = async (index, fileName) => {
+    try {
+      await deleteUploadedFile(fileName);
+      const updatedFiles = files.filter((_, i) => i !== index);
+      setFiles(updatedFiles);
+      if (onFilesChange) {
+        onFilesChange(updatedFiles);
+      }
+    } catch (error) {
+      console.error(`Failed to delete ${fileName}:`, error);
+      alert(`Failed to delete ${fileName}`);
     }
   };
 
@@ -77,8 +111,9 @@ const FileUpload = ({ onFileSelect, onFilesChange }) => {
               <span className="file-size">{formatFileSize(file.size)}</span>
               <button
                 className="remove-file-btn"
-                onClick={() => removeFile(index)}
+                onClick={() => removeFile(index, file.name)}
                 title="Remove file"
+                disabled={uploading}
               >
                 ×
               </button>
@@ -88,12 +123,12 @@ const FileUpload = ({ onFileSelect, onFilesChange }) => {
       )}
 
       <div
-        className={`file-drop-zone ${isDragging ? 'dragging' : ''}`}
+        className={`file-drop-zone ${isDragging ? 'dragging' : ''} ${uploading ? 'uploading' : ''}`}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => !uploading && fileInputRef.current?.click()}
       >
         <input
           ref={fileInputRef}
@@ -101,6 +136,7 @@ const FileUpload = ({ onFileSelect, onFilesChange }) => {
           multiple
           onChange={handleFileInput}
           style={{ display: 'none' }}
+          disabled={uploading}
         />
         <div className="drop-zone-content">
           <span className="upload-icon">
@@ -109,7 +145,7 @@ const FileUpload = ({ onFileSelect, onFilesChange }) => {
             </svg>
           </span>
           <span className="upload-text">
-            {isDragging ? 'Drop files here' : 'Click or drag files to attach'}
+            {uploading ? 'Uploading...' : isDragging ? 'Drop files here' : 'Click or drag files to attach'}
           </span>
         </div>
       </div>

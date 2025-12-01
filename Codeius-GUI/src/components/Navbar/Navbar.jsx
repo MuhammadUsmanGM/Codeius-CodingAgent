@@ -1,23 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Settings from '../Settings/Settings';
 import HistoryIcon from '../HistoryIcon/HistoryIcon';
+import ContextPanel from '../ContextPanel/ContextPanel';
 import './Navbar.css';
 
 const Navbar = ({ onOpenHistory, onModelChange, currentModel }) => {
+  const [showContext, setShowContext] = useState(false);
+
   return (
-    <nav className="navbar">
-      <div className="nav-content">
-        <div className="nav-spacer"></div>
-        <div className="nav-logo">
-          <img src="/favicon.png" alt="Codeius AI Logo" className="logo-icon" />
-          <span className="logo-text">Codeius AI</span>
+    <>
+      <nav className="navbar">
+        <div className="nav-content">
+          <div className="nav-spacer"></div>
+          <div className="nav-logo">
+            <img src="/favicon.png" alt="Codeius AI Logo" className="logo-icon" />
+            <span className="logo-text">Codeius AI</span>
+          </div>
+          <div className="nav-controls">
+            <button className="context-btn" onClick={() => setShowContext(true)} title="View Project Context">
+              🧠 Context
+            </button>
+            <HistoryIcon onOpenHistory={onOpenHistory} />
+            <Settings onModelChange={onModelChange} currentModel={currentModel} />
+          </div>
         </div>
-        <div className="nav-controls"> {/* Combined controls section */}
-          <HistoryIcon onOpenHistory={onOpenHistory} />
-          <Settings onModelChange={onModelChange} currentModel={currentModel} />
-        </div>
-      </div>
-    </nav>
+      </nav>
+      <ContextPanel isOpen={showContext} onClose={() => setShowContext(false)} />
+    </>
   );
 };
 

@@ -1,13 +1,14 @@
 import React, { useRef, useEffect, useState, forwardRef } from 'react';
-import { sendMessage, getCwd, executeShellCommand, getModels, switchModel, clearHistory } from '../../services/api';
+import socketService from '../../services/socket';
+import { getCwd, executeShellCommand, getModels, switchModel, clearHistory } from '../../services/api';
 import CommandAutocomplete from '../CommandAutocomplete/CommandAutocomplete';
 import { COMMANDS } from '../../utils/commands';
+import FileUpload from '../FileUpload/FileUpload';
 import './InputField.css';
 
 const InputField = forwardRef(({ setMessages, messages, inputValue, setInputValue }, ref) => {
-  const [isShellMode, setIsShellMode] = useState(false);
-  const [cwd, setCwd] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [cwd, setCwd] = useState('');
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [charCount, setCharCount] = useState(inputValue?.length || 0);
   const textareaRef = useRef(null);
@@ -198,7 +199,7 @@ const InputField = forwardRef(({ setMessages, messages, inputValue, setInputValu
 
     // Add user message
     const userMessage = {
-      id: messages.length + 1,
+      id: Date.now(),
       text: currentInput,
       sender: 'user',
       timestamp: new Date()
@@ -239,38 +240,37 @@ const InputField = forwardRef(({ setMessages, messages, inputValue, setInputValu
       return;
     }
 
-    // Normal AI Interaction
-    const aiMessageId = messages.length + 2;
-    const loadingMessage = {
-      id: aiMessageId,
-      text: "Thinking...",
-      sender: 'ai',
-      timestamp: new Date(),
-      isLoading: true
-    };
-    
-    setMessages(prev => [...prev, loadingMessage]);
-
+    // Use WebSocket streaming for response
     try {
-      const response = await sendMessage(currentInput);
+      const sessionId = localStorage.getItem('current_session_id') || `session_${Date.now()}`;
+      localStorage.setItem('current_session_id', sessionId);
       
-      setMessages(prev => prev.map(msg => 
-        msg.id === aiMessageId 
-          ? { ...msg, text: response, isLoading: false } 
-          : msg
-      ));
+      socketService.emit('start_stream', {
+        prompt: trimmedInput,
+        session_id: sessionId
+      });
     } catch (error) {
-      setMessages(prev => prev.map(msg => 
-        msg.id === aiMessageId 
-          ? { ...msg, text: "Sorry, I encountered an error connecting to the server.", isLoading: false, isError: true } 
-          : msg
-      ));
-    } finally {
-      setIsSending(false);
+      console.error('Error starting stream:', error);
+      const errorMessage = {
+        id: Date.now() + 1,
+        text: 'Sorry, there was an error processing your request.',
+        sender: 'ai',
+        timestamp: new Date()
+      };
+      setMessages(prevMessages => [...prevMessages, errorMessage]);
     }
+
+    setIsSending(false);
   };
 
   const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const handlePaste = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();

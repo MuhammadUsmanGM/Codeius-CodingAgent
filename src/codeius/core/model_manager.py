@@ -96,20 +96,6 @@ class ModelManager:
                 # Handle MCP provider specifically
                 server_name = getattr(provider, 'server_name', 'mcp_server')
                 provider_name = 'mcp'
-                tools[f"mcp_{i}"] = {
-                    'name': server_name,
-                    'provider': provider_name,
-                    'instance': provider,
-                    'type': 'mcp'
-                }
-        return tools
-
-    def switch_model(self, model_key: str) -> str:
-        """Switch to a specific model by key"""
-        models = self.get_available_models()
-        if model_key in models:
-            # Find the provider index corresponding to the model key
-            for i, provider in enumerate(self.providers):
                 provider_type = type(provider)
                 provider_name = provider_type.__name__.replace('Provider', '')
 

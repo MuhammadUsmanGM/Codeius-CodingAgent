@@ -1,16 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
-import TypingIndicator from '../TypingIndicator/TypingIndicator';
 import MessageActions from '../MessageActions/MessageActions';
 import { useToast } from '../Toast/ToastContainer';
+import { getRelativeTime, formatFullTime } from '../../utils/timeUtils';
 import './ChatBubble.css';
 
 const ChatBubble = ({ text, sender, timestamp, isLoading, message, onCopy, onRegenerate, onDelete, onEdit }) => {
   const [copiedCode, setCopiedCode] = useState(null);
+  const [relativeTime, setRelativeTime] = useState(getRelativeTime(timestamp));
   const toast = useToast();
+
+  // Update relative time every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRelativeTime(getRelativeTime(timestamp));
+    }, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, [timestamp]);
 
   const copyToClipboard = (code, index) => {
     navigator.clipboard.writeText(code);
@@ -91,23 +101,32 @@ const ChatBubble = ({ text, sender, timestamp, isLoading, message, onCopy, onReg
   }
 
   return (
-    <div className={`chat-bubble ${sender}-bubble`}>
+    <div className={`chat-bubble ${sender === 'user' ? 'user-bubble' : 'ai-bubble'} ${message?.isStreaming ? 'streaming' : ''}`}>
       <div className="bubble-content">
         <div className="bubble-text">
           {isLoading ? (
-            <TypingIndicator />
+            <div className="typing-indicator">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
           ) : (
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
-              components={components}
+              components={{
+                code: CodeBlock,
+              }}
             >
               {text}
             </ReactMarkdown>
           )}
+          {message?.isStreaming && <span className="streaming-cursor">▊</span>}
         </div>
-        <div className="bubble-timestamp">{timestamp}</div>
+        <div className="bubble-timestamp" title={formatFullTime(timestamp)}>
+          {relativeTime}
+        </div>
       </div>
-      {!isLoading && sender !== 'system' && message && (
+      {!isLoading && message && message.sender !== 'system' && (
         <MessageActions
           message={message}
           onCopy={onCopy}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getModels, switchModel } from '../../services/api';
 import { useToast } from '../Toast/ToastContainer';
+import LoadingSpinner from '../LoadingSpinner/LoadingSpinner';
 import './Settings.css';
 
 const Settings = ({ onModelChange, currentModel }) => {
@@ -109,7 +110,7 @@ const Settings = ({ onModelChange, currentModel }) => {
               <h4>Model Selection</h4>
 
               {loading ? (
-                <div className="loading-models">Loading models...</div>
+                <LoadingSpinner size="small" message="Loading models..." />
               ) : (
                 <div className="model-list">
                   {models.length > 0 ? (

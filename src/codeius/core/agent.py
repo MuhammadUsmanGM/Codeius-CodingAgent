@@ -223,19 +223,6 @@ class CodingAgent:
         self.conversation_manager.add_message("assistant", response)
 
         # Save the conversation to history
-        self.conversation_manager.save_conversation(prompt, response)
-
-        # Log the activity
-        agent_logger.log_agent_activity(prompt, response, [])
-
-        return response
-
-    def reset_history(self) -> None:
-        """
-        Reset conversation history.
-
-        Clears all previous conversation history, starting fresh.
-        """
         self.conversation_manager.reset_history()
 
     def add_custom_model(self, name: str, api_key: str, base_url: str, model: str) -> bool:

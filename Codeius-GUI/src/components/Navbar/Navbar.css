@@ -31,9 +31,32 @@
   align-items: center;
   gap: 12px;
   flex: 0 0 auto; /* Keep logo fixed size */
+  transition: color 0.2s;
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
+}
+
+.context-btn {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #0072ff, #00c6ff);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-left: 15px;
+}
+
+.context-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 114, 255, 0.4);
+}
+
+.context-btn:active {
+  transform: translateY(0);
 }
 
 .nav-spacer {

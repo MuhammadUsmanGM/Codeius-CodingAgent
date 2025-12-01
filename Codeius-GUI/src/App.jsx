@@ -6,6 +6,9 @@ import ChatBubble from './components/ChatBubble/ChatBubble'
 import HistoryModal from './components/HistoryModal/HistoryModal';
 import KeyboardShortcuts from './components/KeyboardShortcuts/KeyboardShortcuts';
 import GitControls from './components/GitControls/GitControls';
+import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
+import StopButton from './components/StopButton/StopButton';
+import socketService from './services/socket';
 import { saveSessionMessages, getSessionMessages, getCurrentSessionId, loadMessages } from './utils/localStorage'
 import { useToast, ToastProvider } from './components/Toast/ToastContainer';
 import ConfirmationDialog from './components/ConfirmationDialog/ConfirmationDialog';
@@ -19,6 +22,9 @@ function AppContent() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingMessage, setStreamingMessage] = useState(null);
+  const sessionId = useRef(`session_${Date.now()}`);
 
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
@@ -129,51 +135,28 @@ function AppContent() {
     setShowConfirmDialog(true);
   };
 
-  // Always auto-scroll to latest message for user messages, but track for AI responses
+  // Always auto-scroll to latest message
   const shouldAutoScroll = useRef(true);
-  const latestUserMessageId = useRef(null);
 
   useEffect(() => {
     const container = chatContainerRef.current;
-    if (container) {
-      // Check if the latest message is from the user (they want to see their message)
-      const latestMessage = messages[messages.length - 1];
+    if (container && messages.length > 0) {
+      const isNearBottom = container.scrollHeight - container.clientHeight - container.scrollTop < 100;
 
-      // If the latest message is from the user or it's the initial AI welcome message,
-      // always scroll to bottom
-      const isUserMessage = latestMessage?.sender === 'user';
-      const isInitialMessage = messages.length === 1; // Welcome message
-
-      if (isUserMessage || isInitialMessage) {
-        // Always scroll to bottom for user messages and initial messages
+      if (isNearBottom || shouldAutoScroll.current) {
         setTimeout(() => {
           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-          // Update the latest user message ID
-          if (isUserMessage) {
-            latestUserMessageId.current = latestMessage.id;
-          }
-        }, 10); // Small delay to ensure DOM has updated
-      } else {
-        // For AI messages, check if user was near bottom before
-        const isNearBottom = container.scrollHeight - container.clientHeight - container.scrollTop < 100;
-
-        if (isNearBottom) {
-          // Scroll to bottom if user was already near bottom
-          setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-          }, 10);
-        }
+        }, 100);
       }
     }
   }, [messages]);
 
-  // Add scroll listener to detect when user scrolls up
+  // Track user scroll position to pause auto-scroll
   useEffect(() => {
     const container = chatContainerRef.current;
 
     const handleScroll = () => {
       if (container) {
-        // Check if user has scrolled up significantly (more than 100px from bottom)
         const isNearBottom = container.scrollHeight - container.clientHeight - container.scrollTop < 100;
         shouldAutoScroll.current = isNearBottom;
       }
@@ -181,12 +164,75 @@ function AppContent() {
 
     if (container) {
       container.addEventListener('scroll', handleScroll);
-      // Cleanup listener on unmount
       return () => {
         container.removeEventListener('scroll', handleScroll);
       };
     }
   }, []);
+
+  // WebSocket streaming setup
+  useEffect(() => {
+    socketService.connect();
+
+    socketService.on('stream_start', (data) => {
+      if (data.session_id === sessionId.current) {
+        setIsStreaming(true);
+        setStreamingMessage({
+          id: Date.now(),
+          text: '',
+          sender: 'ai',
+          timestamp: new Date(),
+          isStreaming: true
+        });
+      }
+    });
+
+    socketService.on('stream_token', (data) => {
+      if (data.session_id === sessionId.current) {
+        setStreamingMessage(prev => prev ? {
+          ...prev,
+          text: prev.text + data.token
+        } : null);
+      }
+    });
+
+    socketService.on('stream_end', (data) => {
+      if (data.session_id === sessionId.current) {
+        setIsStreaming(false);
+        if (streamingMessage) {
+          setMessages(prev => [...prev, {
+            ...streamingMessage,
+            isStreaming: false
+          }]);
+          setStreamingMessage(null);
+        }
+      }
+    });
+
+    socketService.on('stream_error', (data) => {
+      if (data.session_id === sessionId.current) {
+        setIsStreaming(false);
+        toast.error(`Streaming error: ${data.error}`);
+        setStreamingMessage(null);
+      }
+    });
+
+    return () => {
+      socketService.disconnect();
+    };
+  }, [toast]);
+
+  const handleStopStreaming = () => {
+    socketService.emit('cancel_stream', { session_id: sessionId.current });
+    setIsStreaming(false);
+    if (streamingMessage && streamingMessage.text) {
+      setMessages(prev => [...prev, {
+        ...streamingMessage,
+        isStreaming: false
+      }]);
+    }
+    setStreamingMessage(null);
+  };
 
   // Add keyboard navigation functionality
   useEffect(() => {
@@ -261,23 +307,35 @@ function AppContent() {
         <GitControls />
       </div>
       {/* Chat bubbles appear on the background */}
-      <div className="chat-bubbles-container" ref={chatContainerRef}>
-        {messages.map((message) => (
-          <ChatBubble
-            key={message.id}
-            text={message.text}
-            sender={message.sender}
-            timestamp={message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            isLoading={message.isLoading}
-            message={message}
-            onCopy={handleCopyMessage}
-            onRegenerate={handleRegenerateMessage}
-            onDelete={handleDeleteMessage}
-            onEdit={handleEditMessage}
-          />
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
+      <ErrorBoundary>
+        <div className="chat-bubbles-container" ref={chatContainerRef}>
+          {messages.map((message) => (
+            <ChatBubble
+              key={message.id}
+              text={message.text}
+              sender={message.sender}
+              timestamp={message.timestamp}
+              isLoading={message.isLoading}
+              message={message}
+              onCopy={handleCopyMessage}
+              onRegenerate={handleRegenerateMessage}
+              onDelete={handleDeleteMessage}
+              onEdit={handleEditMessage}
+            />
+          ))}
+          {streamingMessage && (
+            <ChatBubble
+              key="streaming"
+              text={streamingMessage.text}
+              sender={streamingMessage.sender}
+              timestamp={streamingMessage.timestamp}
+              message={streamingMessage}
+            />
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+      </ErrorBoundary>
+      <StopButton isStreaming={isStreaming} onStop={handleStopStreaming} />
       {/* The background image remains visible as the background of the App div */}
       <InputField
         ref={inputFieldRef}
@@ -287,7 +345,9 @@ function AppContent() {
         setInputValue={setInputValue}
       />
       {/* History modal */}
-      <HistoryModal isOpen={isHistoryModalOpen} onClose={closeHistoryModal} />
+      <ErrorBoundary>
+        <HistoryModal isOpen={isHistoryModalOpen} onClose={closeHistoryModal} />
+      </ErrorBoundary>
       {/* Keyboard shortcuts overlay */}
       <KeyboardShortcuts isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
       {/* Confirmation dialog for delete actions */}

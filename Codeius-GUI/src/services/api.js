@@ -1,138 +1,134 @@
-const API_BASE_URL = '/api';
+const API_BASE = 'http://localhost:8080/api';
 
-/**
- * Sends a prompt to the AI assistant.
- * @param {string} prompt - The user's message.
- * @returns {Promise<string>} - The AI's response.
- */
-export const sendMessage = async (prompt) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/ask`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ prompt }),
-    });
+// Helper function for delays
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to get response');
+// Retry mechanism for API calls
+const apiCallWithRetry = async (url, options = {}, retries = 3) => {
+  let lastError;
+  
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const response = await fetch(url, options);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      lastError = error;
+      
+      if (i < retries) {
+        // Exponential backoff: wait 1s, 2s, 4s
+        const waitTime = Math.pow(2, i) * 1000;
+        console.log(`Request failed, retrying in ${waitTime}ms... (${i + 1}/${retries})`);
+        await sleep(waitTime);
+      }
     }
-
-    const data = await response.json();
-    return data.response;
-  } catch (error) {
-    console.error('API Error:', error);
-    throw error;
   }
+  
+  throw lastError;
 };
 
-/**
- * Checks if the backend server is running.
- * @returns {Promise<boolean>}
- */
-export const checkHealth = async () => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/health`);
-    return response.ok;
-  } catch (error) {
-    return false;
-  }
+// Send message to AI
+export const sendMessage = async (prompt) => {
+  return apiCallWithRetry(`${API_BASE}/ask`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt })
+  });
 };
 
-/**
- * Gets the current working directory from the server.
- * @returns {Promise<string>}
- */
+// Execute shell command
+export const executeShellCommand = async (command) => {
+  return apiCallWithRetry(`${API_BASE}/shell`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command })
+  });
+};
+
+// Get current working directory
 export const getCwd = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/cwd`);
-    const data = await response.json();
-    return data.cwd;
+    const response = await apiCallWithRetry(`${API_BASE}/cwd`);
+    return response.cwd;
   } catch (error) {
     console.error('Failed to get CWD:', error);
-    return '';
+    return '/';
   }
 };
 
-/**
- * Executes a shell command on the server.
- * @param {string} command - The command to execute.
- * @returns {Promise<object>} - The command result.
- */
-export const executeShellCommand = async (command) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/shell`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ command }),
-    });
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Shell command error:', error);
-    throw error;
-  }
-};
-
-/**
- * Gets available AI models.
- * @returns {Promise<object>}
- */
+// Get available models
 export const getModels = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/models`);
-    const data = await response.json();
-    return data.models;
+    return await apiCallWithRetry(`${API_BASE}/models`);
   } catch (error) {
     console.error('Failed to get models:', error);
     return {};
   }
 };
 
-/**
- * Switches the active AI model.
- * @param {string} modelKey - The key of the model to switch to.
- * @returns {Promise<string>} - Result message.
- */
-export const switchModel = async (modelKey) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/switch_model`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ model_key: modelKey }),
-    });
+// Switch model
+export const switchModel = async (modelId) => {
+  return apiCallWithRetry(`${API_BASE}/switch_model`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model_id: modelId })
+  });
+};
 
-    const data = await response.json();
-    if (data.error) throw new Error(data.error);
-    return data.result;
+// Clear chat history
+export const clearHistory = async () => {
+  return apiCallWithRetry(`${API_BASE}/clear_history`, {
+    method: 'POST'
+  });
+};
+
+// Upload file
+export const uploadFile = async (formData) => {
+  try {
+    const response = await fetch(`${API_BASE}/upload`, {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Upload failed');
+    }
+    
+    return await response.json();
   } catch (error) {
-    console.error('Switch model error:', error);
+    console.error('File upload error:', error);
     throw error;
   }
 };
 
-/**
- * Clears the conversation history on the server.
- * @returns {Promise<string>}
- */
-export const clearHistory = async () => {
+// Get uploaded files for current session
+export const getUploadedFiles = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/clear_history`, {
-      method: 'POST',
-    });
-
-    const data = await response.json();
-    if (data.error) throw new Error(data.error);
-    return data.result;
+    return await apiCallWithRetry(`${API_BASE}/files`);
   } catch (error) {
-    console.error('Clear history error:', error);
-    throw error;
+    console.error('Failed to get uploaded files:', error);
+    return [];
+  }
+};
+
+// Delete uploaded file
+export const deleteUploadedFile = async (filename) => {
+  return apiCallWithRetry(`${API_BASE}/files/${encodeURIComponent(filename)}`, {
+    method: 'DELETE'
+  });
+};
+
+// Health check
+export const checkHealth = async () => {
+  try {
+    await fetch(`${API_BASE}/health`);
+    return true;
+  } catch (error) {
+    return false;
   }
 };
