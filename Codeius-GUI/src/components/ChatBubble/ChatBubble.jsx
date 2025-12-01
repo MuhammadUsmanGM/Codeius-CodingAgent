@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+```javascript
+import React, { useState, memo, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -8,15 +9,19 @@ import { useToast } from '../Toast/ToastContainer';
 import { getRelativeTime, formatFullTime } from '../../utils/timeUtils';
 import './ChatBubble.css';
 
-const ChatBubble = ({ text, sender, timestamp, isLoading, message, onCopy, onRegenerate, onDelete, onEdit }) => {
+const ChatBubble = memo(({ 
+  text, 
+  sender, 
+  timestamp, 
+  message,
+  onCopy, 
+  onRegenerate, 
+  onDelete,
+  isStreaming 
+}) => {
   const [copiedCode, setCopiedCode] = useState(null);
-  const [relativeTime, setRelativeTime] = useState(getRelativeTime(timestamp));
   const toast = useToast();
 
-  // Update relative time every minute
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRelativeTime(getRelativeTime(timestamp));
     }, 60000); // Update every minute
 
     return () => clearInterval(interval);
@@ -116,16 +121,24 @@ const ChatBubble = ({ text, sender, timestamp, isLoading, message, onCopy, onReg
               components={{
                 code: CodeBlock,
               }}
+              components={components} // Use the custom components for code blocks
             >
               {text}
             </ReactMarkdown>
           )}
           {message?.isStreaming && <span className="streaming-cursor">▊</span>}
         </div>
-        <div className="bubble-timestamp" title={formatFullTime(timestamp)}>
-          {relativeTime}
-        </div>
       </div>
+      
+      <div className="chat-bubble-footer">
+        <span 
+          className="timestamp" 
+          title={fullTime}
+        >
+          {relativeTime}
+        </span>
+      </div>
+
       {!isLoading && message && message.sender !== 'system' && (
         <MessageActions
           message={message}

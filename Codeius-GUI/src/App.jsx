@@ -1,17 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
 import Navbar from './components/Navbar/Navbar'
 import InputField from './components/InputField/InputField'
-import Sidebar from './components/Sidebar/Sidebar'
 import ChatBubble from './components/ChatBubble/ChatBubble'
-import HistoryModal from './components/HistoryModal/HistoryModal';
-import KeyboardShortcuts from './components/KeyboardShortcuts/KeyboardShortcuts';
-import GitControls from './components/GitControls/GitControls';
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
 import StopButton from './components/StopButton/StopButton';
 import socketService from './services/socket';
 import { saveSessionMessages, getSessionMessages, getCurrentSessionId, loadMessages } from './utils/localStorage'
 import { useToast, ToastProvider } from './components/Toast/ToastContainer';
 import ConfirmationDialog from './components/ConfirmationDialog/ConfirmationDialog';
+import LoadingSpinner from './components/LoadingSpinner/LoadingSpinner';
 import './App.css'
 
 function AppContent() {
@@ -308,7 +305,28 @@ function AppContent() {
       </div>
       {/* Chat bubbles appear on the background */}
       <ErrorBoundary>
-        <div className="chat-bubbles-container" ref={chatContainerRef}>
+        <div className="chat-container" ref={chatContainerRef}>
+          {/* Settings Modal */}
+          <Suspense fallback={<LoadingSpinner size="medium" />}>
+            {showSettings && (
+              <Settings
+                onClose={() => setShowSettings(false)}
+                onModelChange={handleModelChange}
+                currentModel={currentModel}
+              />
+            )}
+          </Suspense>
+
+          {/* History Modal */}
+          <Suspense fallback={<LoadingSpinner size="medium" />}>
+            {showHistory && (
+              <HistoryModal
+                isOpen={showHistory}
+                onClose={() => setShowHistory(false)}
+                onSelectConversation={loadHistoryConversation}
+              />
+            )}
+          </Suspense>
           {messages.map((message) => (
             <ChatBubble
               key={message.id}

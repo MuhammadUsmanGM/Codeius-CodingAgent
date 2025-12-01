@@ -173,21 +173,6 @@ class CodingAgent:
             "   {\"type\": \"read_output\",       \"pid\": 123},\n"
             "   {\"type\": \"read_error\",        \"pid\": 123},\n"
             "   {\"type\": \"stop_process\",      \"pid\": 123}\n"
-            " ]\n"
-            "}\n"
-            "If only a conversation or non-code answer is needed, reply conversationally."
-        )
-
-    @cached(cache)
-    def ask(self, prompt: str, max_tokens: Optional[int] = None) -> str:
-        """
-        Process user input and return agent response.
-
-        Composes a dialogue with the LLM, processes the response for actions,
-        and manages the conversation state.
-
-        Args:
-            prompt: The user's input prompt to process
             max_tokens: Optional maximum number of tokens for the response
                         (defaults to config value if not provided)
 

@@ -40,9 +40,11 @@ class ConversationDB:
             )
         ''')
         
-        # Create indices
+        # Create indices for better performance
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_session_id ON conversations(session_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_timestamp ON conversations(timestamp)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_session_timestamp ON conversations(session_id, timestamp DESC)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_active_sessions ON sessions(last_active DESC)')
         
         conn.commit()
         conn.close()
