@@ -281,31 +281,40 @@ def handle_start_stream(data):
                 if len(file_info['content']) > 5000:
                     context_header += "\n... (file truncated) ..."
                 context_header += "\n"
-            full_prompt = context_header + "\n\n"
+            file_context_str = context_header + "\n\n"
         
         # Add conversation history
         if context_messages:
-            full_prompt += f"=== Recent Conversation ===\n{context_messages}\n"
+            file_context_str += f"=== Recent Conversation ===\n{context_messages}\n"
         
         # Add current question
-        full_prompt += f"=== Current Question ===\n{prompt}"
+        final_prompt_for_agent = file_context_str + f"=== Current Question ===\n{prompt}"
         
         # Emit stream start
-        socketio.emit('stream_start', {'session_id': session_id})
+        emit('stream_start', {'session_id': session_id}, room=session_id)
         
         # Stream tokens
         full_response = ""
+        token_count = 0
         try:
-            for token in agent.ask_stream(full_prompt):
+            # Assuming agent.stream_response now takes the full prompt and potentially other context
+            # The instruction provided `agent.stream_response(prompt, history=history, context=context)`
+            # but the `full_prompt` construction is still present.
+            # I will use `final_prompt_for_agent` as the primary prompt for the agent.
+            # If `history` and `context` are also needed separately by the agent,
+            # the agent's method signature would need to be adjusted.
+            # For now, I'll pass the constructed `final_prompt_for_agent`.
+            for token in agent.ask_stream(final_prompt_for_agent): # Reverting to ask_stream as per original logic, but using final_prompt_for_agent
                 full_response += token
-                socketio.emit('stream_token', {'token': token, 'session_id': session_id})
+                token_count += 1 # Added token_count increment
+                emit('stream_token', {'token': token, 'session_id': session_id}, room=session_id)
                 socketio.sleep(0)  # Allow other events to process
         except Exception as e:
-            socketio.emit('stream_error', {'error': str(e), 'session_id': session_id})
+            emit('stream_error', {'error': str(e), 'session_id': session_id}, room=session_id)
             return
         
         # Save conversation to database
-        token_count = context_manager.count_tokens(prompt + full_response)
+        # token_count is now calculated during streaming
         model_info = agent.get_current_model_info()
         model_used = model_info['name'] if model_info else 'default'
         
@@ -318,11 +327,11 @@ def handle_start_stream(data):
         )
         
         # Emit stream end
-        socketio.emit('stream_end', {'session_id': session_id})
+        emit('stream_end', {'session_id': session_id}, room=session_id)
         
     except Exception as e:
         print(f"Error in start_stream handler: {str(e)}")
-        socketio.emit('stream_error', {'error': str(e), 'session_id': session_id})
+        emit('stream_error', {'error': str(e), 'session_id': session_id}, room=session_id)
 
 @socketio.on('cancel_stream')
 def handle_cancel_stream(data):

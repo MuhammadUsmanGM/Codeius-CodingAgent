@@ -1,0 +1,33 @@
+.collaborator-list {
+  display: flex;
+  align-items: center;
+  gap: -8px; /* Overlap avatars */
+  margin-right: 16px;
+}
+
+.collaborator-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #007acc;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 2px solid #252526; /* Match navbar bg */
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.collaborator-avatar:hover {
+  transform: translateY(-2px);
+  z-index: 10;
+}
+
+.collaborator-count {
+  font-size: 0.8rem;
+  color: #888;
+  margin-left: 8px;
+}

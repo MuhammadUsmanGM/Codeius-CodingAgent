@@ -1,8 +1,10 @@
+```
 import React, { useState } from 'react';
 import Settings from '../Settings/Settings';
 import HistoryIcon from '../HistoryIcon/HistoryIcon';
 import ContextPanel from '../ContextPanel/ContextPanel';
 import ExportMenu from '../ExportMenu/ExportMenu';
+import CollaboratorList from '../CollaboratorList/CollaboratorList';
 import './Navbar.css';
 
 const Navbar = ({ onOpenHistory, onModelChange, currentModel, user, messages }) => {
@@ -18,6 +20,7 @@ const Navbar = ({ onOpenHistory, onModelChange, currentModel, user, messages }) 
             <span className="logo-text">Codeius AI</span>
           </div>
           <div className="nav-controls">
+            <CollaboratorList sessionId="current-session" />
             {messages && messages.length > 0 && (
               <ExportMenu messages={messages} elementId="chat-container" />
             )}
@@ -35,3 +38,4 @@ const Navbar = ({ onOpenHistory, onModelChange, currentModel, user, messages }) 
 };
 
 export default Navbar;
+```
