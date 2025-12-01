@@ -147,28 +147,6 @@ def handle_command(agent: CodingAgent, command: str) -> bool:
         except:
             print_error("Git not available")
     
-    else:
-        print_error(f"Unknown command: {cmd}")
-        print_info("Type '/help' for available commands")
-    
-    return True
-
-def run_enhanced_cli():
-    """Run enhanced CLI with rich formatting"""
-    agent = CodingAgent()
-    
-    print_welcome()
-    
-    while True:
-        try:
-            # Get user input
-            user_input = Prompt.ask("\n[bold blue]🤖 Codeius[/bold blue]").strip()
-            
-            if not user_input:
-                continue
-            
-            # Handle commands
-            if user_input.startswith('/'):
                 should_continue = handle_command(agent, user_input)
                 history_manager.add_command(user_input, success=True)
                 
