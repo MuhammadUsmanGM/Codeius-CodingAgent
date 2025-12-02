@@ -332,6 +332,13 @@ const InputField = forwardRef(({ setMessages, messages, inputValue, setInputValu
   };
 
   const handleKeyDown = (e) => {
+    // If autocomplete is open, let it handle navigation/selection via its own listeners
+    // We just need to prevent the Enter key from submitting the message
+    if ((showAutocomplete || showFileAutocomplete) && e.key === 'Enter') {
+      e.preventDefault();
+      return;
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();

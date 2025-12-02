@@ -136,6 +136,20 @@ export const getFiles = async (path = '.') => {
   }
 };
 
+export const shareSession = async (sessionId) => {
+  try {
+    const response = await fetch(`${API_BASE}/sessions/${sessionId}/share`, {
+      method: 'POST',
+    });
+    if (!response.ok) throw new Error('Failed to share session');
+    const data = await response.json();
+    return data.share_url;
+  } catch (error) {
+    console.error('Error sharing session:', error);
+    throw error;
+  }
+};
+
 export const checkHealth = async () => {
   try {
     await fetch(`${API_BASE}/health`);
